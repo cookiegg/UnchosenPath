@@ -12,11 +12,14 @@
   </p>
   
   <p>
+    <a href="https://cookiegg.github.io/UnchosenPath/">🎮 在线体验</a> •
     <a href="https://github.com/cookiegg">GitHub</a> •
     <a href="https://x.com/XuefW82242">X (Twitter)</a> •
     <a href="https://v.douyin.com/EvusAOjyPXQ">抖音</a>
   </p>
 </div>
+
+> 🚀 **在线体验**：访问 [https://cookiegg.github.io/UnchosenPath/](https://cookiegg.github.io/UnchosenPath/) 立即开始你的人生推演！
 
 ## 📖 项目概述
 
