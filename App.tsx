@@ -1143,77 +1143,78 @@ const GameContent: React.FC = () => {
             />
           </div>
 
-          {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-3 rounded border border-red-800">{error}</div>}
+          {error && <div className="col-span-1 md:col-span-4 text-red-400 text-sm text-center mt-4 bg-red-900/20 p-3 rounded border border-red-800">{error}</div>}
 
-          {/* Bottom Action Bar */}
-          <div className="mt-6 p-4 bg-academic-900/50 rounded-lg border border-academic-700">
-            <div className="flex flex-wrap justify-center items-center gap-4">
-              {/* AI Config */}
-              <div
-                className={`text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
-                  ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
-                  : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
-                  }`}
-                onClick={() => setShowConfig(true)}
-              >
-                <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                {isConfigured ? `${aiConfig?.provider} / ${aiConfig?.modelName}` : '配置 AI'}
-              </div>
-
-              {/* Prompt Template */}
-              <div
-                className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
-                onClick={() => setShowPromptEditor(true)}
-              >
-                <span>📝</span>
-                {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '提示词'}
-              </div>
-
-              {/* Save Profile */}
-              <button
-                onClick={() => {
-                  localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
-                  alert('资料已保存！下次打开页面会自动填充。');
-                }}
-                className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
-                title="保存当前填写的资料，下次打开自动填充"
-              >
-                <span>💾</span>
-                保存资料
-              </button>
-
-              {/* Start Button */}
-              <Button
-                onClick={handleStartGame}
-                disabled={
-                  !profile.name ||
-                  !profile.hometown.province ||
-                  !profile.hometown.city ||
-                  !profile.currentLocation.province ||
-                  !profile.currentLocation.city ||
-                  !profile.skills ||
-                  (profile.currentStatus === '学生' && !profile.major) ||
-                  (profile.currentStatus !== '学生' && !profile.profession) ||
-                  (profile.currentStatus === '学生' && !profile.grade) ||
-                  (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
-                  loading
-                }
-                isLoading={loading}
-              >
-                🚀 开始模拟人生
-              </Button>
+          {/* Bottom Action Bar - 占满4列，内部再分4格 */}
+          <div className="col-span-1 md:col-span-4 mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-academic-900/50 rounded-lg border border-academic-700">
+            {/* AI配置按钮 */}
+            <div
+              className={`text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors ${isConfigured
+                ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
+                : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
+                }`}
+              onClick={() => setShowConfig(true)}
+            >
+              <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span>{isConfigured ? `${aiConfig?.provider}` : '配置AI'}</span>
             </div>
 
-            {/* Reset Button (only if there is saved data) */}
-            {localStorage.getItem('life_sim_game_state') && (
+            {/* 提示词按钮 */}
+            <div
+              className="text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
+              onClick={() => setShowPromptEditor(true)}
+            >
+              <span>📝</span>
+              <span>{getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '提示词'}</span>
+            </div>
+
+            {/* 保存资料按钮 */}
+            <button
+              onClick={() => {
+                localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
+                alert('资料已保存！下次打开页面会自动填充。');
+              }}
+              className="text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
+              title="保存当前填写的资料"
+            >
+              <span>💾</span>
+              <span>保存资料</span>
+            </button>
+
+            {/* 开始模拟按钮 */}
+            <Button
+              onClick={handleStartGame}
+              disabled={
+                !profile.name ||
+                !profile.hometown.province ||
+                !profile.hometown.city ||
+                !profile.currentLocation.province ||
+                !profile.currentLocation.city ||
+                !profile.skills ||
+                (profile.currentStatus === '学生' && !profile.major) ||
+                (profile.currentStatus !== '学生' && !profile.profession) ||
+                (profile.currentStatus === '学生' && !profile.grade) ||
+                (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
+                loading
+              }
+              isLoading={loading}
+              className="w-full"
+            >
+              🚀 开始模拟
+            </Button>
+          </div>
+
+          {/* 清除存档按钮 - 单独一行 */}
+          {localStorage.getItem('life_sim_game_state') && (
+            <div className="col-span-1 md:col-span-4 mt-2 text-center">
               <button
                 onClick={handleResetGame}
-                className="px-4 py-2 text-academic-500 text-sm hover:text-red-400 transition-colors underline"
+                className="text-xs px-3 py-1.5 rounded border border-red-800/50 text-red-400 hover:bg-red-900/30 transition-colors"
               >
-                清除存档
+                🗑️ 清除存档
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     );
