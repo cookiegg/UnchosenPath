@@ -39,8 +39,17 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onOptionSelect, i
           )}
 
           <div className="text-lg md:text-xl font-serif text-academic-50 leading-relaxed">
-            {scenario.description.split('\n').map((paragraph, idx) => (
-              paragraph.trim() && <p key={idx} className="mb-4 last:mb-0">{paragraph}</p>
+            {scenario.description.split(/\n\n+/).map((paragraph, idx) => (
+              paragraph.trim() && (
+                <p key={idx} className="mb-5 last:mb-0 text-justify">
+                  {paragraph.split('\n').map((line, lineIdx) => (
+                    <React.Fragment key={lineIdx}>
+                      {line}
+                      {lineIdx < paragraph.split('\n').length - 1 && <br />}
+                    </React.Fragment>
+                  ))}
+                </p>
+              )
             ))}
           </div>
         </div>

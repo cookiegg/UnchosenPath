@@ -323,7 +323,7 @@ const GameContent: React.FC = () => {
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Load Config and Game State on Mount
+  // Load Config, Profile and Game State on Mount
   useEffect(() => {
     // Load Config
     const savedConfig = localStorage.getItem('life_sim_ai_config');
@@ -357,8 +357,18 @@ const GameContent: React.FC = () => {
           setCurrentScenario(parsed.currentScenario);
           setFinalResult(parsed.finalResult);
           setHistory(parsed.history || []);
+          return; // Don't load saved profile if game is in progress
         }
       } catch (e) { console.error("Failed to load game state"); }
+    }
+
+    // Load saved profile (only if no game in progress)
+    const savedProfile = localStorage.getItem('life_sim_saved_profile');
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        setProfile(prev => ({ ...prev, ...parsed }));
+      } catch (e) { console.error("Failed to load saved profile"); }
     }
   }, []);
 
@@ -974,25 +984,37 @@ const GameContent: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="mt-6 flex flex-col items-center gap-3">
-            <Button
-              onClick={handleStartGame}
-              disabled={
-                !profile.name ||
-                !profile.hometown.province ||
-                !profile.hometown.city ||
-                !profile.currentLocation.province ||
-                !profile.currentLocation.city ||
-                !profile.skills ||
-                (profile.currentStatus === '学生' && !profile.major) ||
-                (profile.currentStatus !== '学生' && !profile.profession) ||
-                (profile.currentStatus === '学生' && !profile.grade) ||
-                (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
-                loading
-              }
-              isLoading={loading}
-            >
-              开始模拟人生
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleStartGame}
+                disabled={
+                  !profile.name ||
+                  !profile.hometown.province ||
+                  !profile.hometown.city ||
+                  !profile.currentLocation.province ||
+                  !profile.currentLocation.city ||
+                  !profile.skills ||
+                  (profile.currentStatus === '学生' && !profile.major) ||
+                  (profile.currentStatus !== '学生' && !profile.profession) ||
+                  (profile.currentStatus === '学生' && !profile.grade) ||
+                  (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
+                  loading
+                }
+                isLoading={loading}
+              >
+                开始模拟人生
+              </Button>
+              <button
+                onClick={() => {
+                  localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
+                  alert('资料已保存！下次打开页面会自动填充。');
+                }}
+                className="px-4 py-2 text-sm bg-academic-700 border border-academic-600 text-academic-200 rounded hover:bg-academic-600 transition-colors"
+                title="保存当前填写的资料，下次打开自动填充"
+              >
+                💾 保存资料
+              </button>
+            </div>
 
             {/* Reset Button (only if there is saved data) */}
             {localStorage.getItem('life_sim_game_state') && (
