@@ -21,7 +21,7 @@
 ## 📖 项目概述
 
 ### 项目简介
-一个基于 AI 大语言模型驱动的互动式人生模拟游戏，通过深度的社会洞察和第一性原理推演，模拟不同年龄,不同境遇的中国人的人生轨迹。用户通过一系列关键决策，体验不同选择带来的人生结果，最终获得个性化的十年人生评价报告。
+一个基于 AI 大语言模型驱动的互动式人生模拟游戏，通过深度的社会洞察和第一性原理推演，模拟不同年龄,不同境遇的人在指定时间段内的人生轨迹。用户通过一系列关键决策，体验不同选择带来的人生结果，最终获得个性化的人生评价报告。
 
 ### 核心价值
 - **教育意义**：帮助年轻人思考未来规划、职业选择和人生决策
@@ -35,6 +35,45 @@
 - 响应式设计，支持桌面和移动端
 - 类型安全的 TypeScript 实现
 - 优雅的错误处理和重试机制
+
+
+---
+
+## 🚀 部署与运行
+
+### 开发环境
+
+#### 前置要求
+- Node.js 16+ 
+- npm 或 yarn
+
+#### 安装步骤
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd life-simulator
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器
+npm run dev
+
+# 4. 访问应用
+# 浏览器打开 http://localhost:3000
+```
+
+### 生产构建
+
+```bash
+# 构建生产版本
+npm run build
+
+# 预览生产构建
+npm run preview
+```
+
+构建产物位于 `dist/` 目录。
 
 ---
 
@@ -442,48 +481,6 @@ AI 回顾所有历史决策
 
 ---
 
-## 🚀 部署与运行
-
-### 开发环境
-
-#### 前置要求
-- Node.js 16+ 
-- npm 或 yarn
-
-#### 安装步骤
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd life-simulator
-
-# 2. 安装依赖
-npm install
-
-# 3. 配置环境变量
-# 编辑 .env.local 文件
-GEMINI_API_KEY=your_actual_api_key_here
-
-# 4. 启动开发服务器
-npm run dev
-
-# 5. 访问应用
-# 浏览器打开 http://localhost:3000
-```
-
-### 生产构建
-
-```bash
-# 构建生产版本
-npm run build
-
-# 预览生产构建
-npm run preview
-```
-
-构建产物位于 `dist/` 目录。
-
----
-
 ## 🔐 安全考虑
 
 ### API Key 管理
@@ -553,10 +550,6 @@ A: 确保使用现代浏览器（Chrome、Safari、Firefox 最新版）。
 **Q: 如何获取 API Key？**
 A: 访问对应 AI 提供商的官网注册并获取 API Key。
 
-### 开发者联系方式
-- GitHub Issues: [项目仓库]
-- Email: [mymcywxf@mail.ustc.edu.cn]
-- 文档: [在线文档地址]
 
 ---
 

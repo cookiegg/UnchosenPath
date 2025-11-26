@@ -41,7 +41,7 @@
   
   <!-- 标题 -->
   <text x="600" y="50" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="#1e293b">
-    十年人生模拟器 - 系统架构
+    人生模拟器 - 系统架构
   </text>
   <text x="600" y="80" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#64748b">
     Ten-Year Life Simulator (2025-2035)
