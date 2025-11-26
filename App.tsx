@@ -329,8 +329,8 @@ const PromptEditorModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm fade-in p-4">
-      <div className="bg-academic-900 border border-academic-600 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm fade-in p-2">
+      <div className="bg-academic-900 border border-academic-600 rounded-xl w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-academic-700 flex justify-between items-center">
           <h3 className="text-xl font-serif text-academic-50 flex items-center">
             <span className="text-amber-500 mr-2">📝</span> 系统提示词设置
@@ -396,8 +396,8 @@ const PromptEditorModal: React.FC<{
               value={editingTemplate}
               onChange={(e) => setEditingTemplate(e.target.value)}
               readOnly={!isEditing}
-              className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-3 rounded text-xs font-mono resize-none ${
-                isEditing ? 'focus:border-amber-600' : 'opacity-80'
+              className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-4 rounded text-sm font-mono resize-none leading-relaxed ${
+                isEditing ? 'focus:border-amber-600 focus:outline-none' : 'opacity-80'
               }`}
               placeholder="在这里编辑提示词模板..."
             />
@@ -1143,32 +1143,46 @@ const GameContent: React.FC = () => {
             />
           </div>
 
-          {/* AI Status Indicator */}
-          <div className="mt-6 flex justify-center gap-3">
-            <div
-              className={`text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
-                ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
-                : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
-                }`}
-              onClick={() => setShowConfig(true)}
-            >
-              <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
-              {isConfigured ? `已配置: ${aiConfig?.provider} / ${aiConfig?.modelName}` : '未配置 AI (点击设置)'}
-            </div>
-            <div
-              className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
-              onClick={() => setShowPromptEditor(true)}
-            >
-              <span>📝</span>
-              提示词: {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '默认'}
-            </div>
-          </div>
-
           {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-3 rounded border border-red-800">{error}</div>}
 
-          {/* Action Buttons */}
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <div className="flex gap-3">
+          {/* Bottom Action Bar */}
+          <div className="mt-6 p-4 bg-academic-900/50 rounded-lg border border-academic-700">
+            <div className="flex flex-wrap justify-center items-center gap-4">
+              {/* AI Config */}
+              <div
+                className={`text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
+                  ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
+                  : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
+                  }`}
+                onClick={() => setShowConfig(true)}
+              >
+                <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                {isConfigured ? `${aiConfig?.provider} / ${aiConfig?.modelName}` : '配置 AI'}
+              </div>
+
+              {/* Prompt Template */}
+              <div
+                className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
+                onClick={() => setShowPromptEditor(true)}
+              >
+                <span>📝</span>
+                {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '提示词'}
+              </div>
+
+              {/* Save Profile */}
+              <button
+                onClick={() => {
+                  localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
+                  alert('资料已保存！下次打开页面会自动填充。');
+                }}
+                className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
+                title="保存当前填写的资料，下次打开自动填充"
+              >
+                <span>💾</span>
+                保存资料
+              </button>
+
+              {/* Start Button */}
               <Button
                 onClick={handleStartGame}
                 disabled={
@@ -1186,18 +1200,8 @@ const GameContent: React.FC = () => {
                 }
                 isLoading={loading}
               >
-                开始模拟人生
+                🚀 开始模拟人生
               </Button>
-              <button
-                onClick={() => {
-                  localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
-                  alert('资料已保存！下次打开页面会自动填充。');
-                }}
-                className="px-4 py-2 text-sm bg-academic-700 border border-academic-600 text-academic-200 rounded hover:bg-academic-600 transition-colors"
-                title="保存当前填写的资料，下次打开自动填充"
-              >
-                💾 保存资料
-              </button>
             </div>
 
             {/* Reset Button (only if there is saved data) */}
