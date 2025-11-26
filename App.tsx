@@ -1431,6 +1431,8 @@ const GameContent: React.FC = () => {
               scenario={currentScenario}
               onOptionSelect={handleOptionSelect}
               isLoading={loading}
+              lastChoice={history.length > 0 ? history[history.length - 1].choiceText : undefined}
+              playerName={profile.name}
             />
           </div>
         )}
