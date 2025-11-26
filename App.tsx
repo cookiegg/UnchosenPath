@@ -723,6 +723,7 @@ const GameContent: React.FC = () => {
         <p className="text-academic-400 mb-4 font-light leading-snug text-xs bg-academic-900/50 p-2 rounded border-l-4 border-amber-600">
           <strong>推演核心：</strong>
           AI让信息生产成本归零，我们模拟在"信息无限、物质稀缺、信任重构"的新时代背景下，一个碳基生命的真实生存博弈。
+          <span className="text-academic-500 ml-1">（纯属虚构，博君一笑，切勿当真）</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
