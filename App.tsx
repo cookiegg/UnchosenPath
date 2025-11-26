@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, ErrorInfo } from 'react';
 import { GameState, PlayerProfile, GameScenario, GameOption, FinalEvaluation, AIConfig, ModelProvider, HistoryItem } from './types';
-import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig } from './services/geminiService';
+import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig, setPromptTemplate } from './services/geminiService';
+import { getAllTemplates, saveCustomTemplate, deleteCustomTemplate, PromptTemplate } from './services/promptTemplates';
 import Button from './components/Button';
 import ScenarioCard from './components/ScenarioCard';
 import Tooltip from './components/Tooltip';
@@ -269,6 +270,166 @@ const ConfirmModal: React.FC<{
   );
 };
 
+// Prompt Editor Modal
+const PromptEditorModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  selectedId: string;
+  onSelectTemplate: (id: string, template: string) => void;
+}> = ({ isOpen, onClose, selectedId, onSelectTemplate }) => {
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<string>('');
+  const [editingName, setEditingName] = useState<string>('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTemplates(getAllTemplates());
+      const current = getAllTemplates().find(t => t.id === selectedId);
+      if (current) {
+        setEditingTemplate(current.template);
+        setEditingName(current.name);
+      }
+    }
+  }, [isOpen, selectedId]);
+
+  const handleSelectTemplate = (id: string) => {
+    const template = templates.find(t => t.id === id);
+    if (template) {
+      setEditingTemplate(template.template);
+      setEditingName(template.name);
+      onSelectTemplate(id, template.template);
+    }
+  };
+
+  const handleSaveCustom = () => {
+    const customId = `custom_${Date.now()}`;
+    const newTemplate: PromptTemplate = {
+      id: customId,
+      name: editingName || '自定义模板',
+      description: '用户自定义的提示词模板',
+      template: editingTemplate
+    };
+    saveCustomTemplate(newTemplate);
+    setTemplates(getAllTemplates());
+    onSelectTemplate(customId, editingTemplate);
+    setIsEditing(false);
+  };
+
+  const handleDeleteCustom = (id: string) => {
+    if (id.startsWith('custom_')) {
+      deleteCustomTemplate(id);
+      setTemplates(getAllTemplates());
+      if (selectedId === id) {
+        onSelectTemplate('v1', templates.find(t => t.id === 'v1')?.template || '');
+      }
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm fade-in p-4">
+      <div className="bg-academic-900 border border-academic-600 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+        <div className="p-4 border-b border-academic-700 flex justify-between items-center">
+          <h3 className="text-xl font-serif text-academic-50 flex items-center">
+            <span className="text-amber-500 mr-2">📝</span> 系统提示词设置
+          </h3>
+          <button onClick={onClose} className="text-academic-400 hover:text-white">✕</button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Template List */}
+          <div className="w-1/3 border-r border-academic-700 p-4 overflow-y-auto">
+            <div className="text-xs text-academic-500 uppercase tracking-wider mb-3">选择模板</div>
+            <div className="space-y-2">
+              {templates.map(t => (
+                <div
+                  key={t.id}
+                  className={`p-3 rounded cursor-pointer transition-colors ${
+                    selectedId === t.id
+                      ? 'bg-amber-600/20 border border-amber-600'
+                      : 'bg-academic-800 border border-academic-700 hover:border-academic-500'
+                  }`}
+                  onClick={() => handleSelectTemplate(t.id)}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="font-medium text-academic-100 text-sm">{t.name}</div>
+                    {t.id.startsWith('custom_') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCustom(t.id); }}
+                        className="text-red-400 hover:text-red-300 text-xs"
+                      >🗑</button>
+                    )}
+                  </div>
+                  <div className="text-xs text-academic-500 mt-1">{t.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Template Editor */}
+          <div className="flex-1 p-4 flex flex-col">
+            <div className="flex justify-between items-center mb-3">
+              <div className="text-xs text-academic-500 uppercase tracking-wider">
+                {isEditing ? '编辑模板' : '模板预览'}
+              </div>
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className="text-xs px-3 py-1 bg-academic-800 border border-academic-600 rounded text-academic-300 hover:text-white"
+              >
+                {isEditing ? '取消编辑' : '✏️ 编辑'}
+              </button>
+            </div>
+
+            {isEditing && (
+              <input
+                type="text"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                placeholder="模板名称"
+                className="mb-2 w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded text-sm"
+              />
+            )}
+
+            <textarea
+              value={editingTemplate}
+              onChange={(e) => setEditingTemplate(e.target.value)}
+              readOnly={!isEditing}
+              className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-3 rounded text-xs font-mono resize-none ${
+                isEditing ? 'focus:border-amber-600' : 'opacity-80'
+              }`}
+              placeholder="在这里编辑提示词模板..."
+            />
+
+            <div className="text-xs text-academic-600 mt-2">
+              可用变量: {'{{startYear}}'}, {'{{endYear}}'}, {'{{years}}'}, {'{{profileSection}}'}
+            </div>
+
+            {isEditing && (
+              <div className="mt-3 flex gap-2">
+                <Button onClick={handleSaveCustom}>
+                  💾 保存为新模板
+                </Button>
+                <Button variant="secondary" onClick={() => {
+                  onSelectTemplate(selectedId, editingTemplate);
+                  setIsEditing(false);
+                }}>
+                  仅本次使用
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-academic-700 flex justify-end">
+          <Button onClick={onClose}>确定</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Helper to check if grade is university level
 const isUniversityStudent = (grade?: string) => {
   if (!grade) return false;
@@ -321,6 +482,11 @@ const GameContent: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  // Prompt Template State
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('v1');
+  const [customPromptText, setCustomPromptText] = useState<string>('');
+
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Load Config, Profile and Game State on Mount
@@ -369,6 +535,17 @@ const GameContent: React.FC = () => {
         const parsed = JSON.parse(savedProfile);
         setProfile(prev => ({ ...prev, ...parsed }));
       } catch (e) { console.error("Failed to load saved profile"); }
+    }
+
+    // Load saved prompt template selection
+    const savedTemplateId = localStorage.getItem('life_sim_selected_template');
+    if (savedTemplateId) {
+      setSelectedTemplateId(savedTemplateId);
+      const templates = getAllTemplates();
+      const template = templates.find(t => t.id === savedTemplateId);
+      if (template) {
+        setPromptTemplate(template.template);
+      }
     }
   }, []);
 
@@ -967,7 +1144,7 @@ const GameContent: React.FC = () => {
           </div>
 
           {/* AI Status Indicator */}
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex justify-center gap-3">
             <div
               className={`text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
                 ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
@@ -977,6 +1154,13 @@ const GameContent: React.FC = () => {
             >
               <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
               {isConfigured ? `已配置: ${aiConfig?.provider} / ${aiConfig?.modelName}` : '未配置 AI (点击设置)'}
+            </div>
+            <div
+              className="text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
+              onClick={() => setShowPromptEditor(true)}
+            >
+              <span>📝</span>
+              提示词: {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '默认'}
             </div>
           </div>
 
@@ -1087,7 +1271,10 @@ const GameContent: React.FC = () => {
         </div>
 
         <div className="mt-8 flex justify-center gap-4">
-          <Button onClick={() => window.location.reload()}>
+          <Button onClick={() => {
+            localStorage.removeItem('life_sim_game_state');
+            window.location.reload();
+          }}>
             再次重启人生
           </Button>
           <Button variant="secondary" onClick={handleExport}>
@@ -1210,6 +1397,17 @@ const GameContent: React.FC = () => {
         onConfirm={confirmReset}
         title="重启人生？"
         message="确定要重置当前游戏进度吗？所有未保存的记录将丢失，你将回到角色创建界面。"
+      />
+
+      <PromptEditorModal
+        isOpen={showPromptEditor}
+        onClose={() => setShowPromptEditor(false)}
+        selectedId={selectedTemplateId}
+        onSelectTemplate={(id, template) => {
+          setSelectedTemplateId(id);
+          setPromptTemplate(template);
+          localStorage.setItem('life_sim_selected_template', id);
+        }}
       />
 
       {/* Background Decor */}

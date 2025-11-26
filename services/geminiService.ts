@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, Chat, Schema } from "@google/genai";
 import { GameScenario, FinalEvaluation, PlayerProfile, AIConfig, ModelProvider } from "../types";
-import { getSystemInstruction } from "./systemPrompt";
+import { generatePromptFromTemplate, defaultTemplates } from "./promptTemplates";
 
 // --- SHARED HELPERS ---
 
@@ -50,9 +50,14 @@ let activeConfig: AIConfig | null = null;
 let geminiChatSession: Chat | null = null;
 let openaiHistory: Array<{ role: string; content: string }> = [];
 let currentProfile: PlayerProfile | null = null;
+let activePromptTemplate: string = defaultTemplates[0].template;
 
 export const setAIConfig = (config: AIConfig) => {
   activeConfig = config;
+};
+
+export const setPromptTemplate = (template: string) => {
+  activePromptTemplate = template;
 };
 
 // --- SCHEMAS ---
@@ -157,7 +162,7 @@ export const initializeGame = async (profile: PlayerProfile): Promise<GameScenar
     throw new Error("请先在设置中配置 API Key");
   }
 
-  const systemPrompt = getSystemInstruction(profile, activeConfig.provider !== ModelProvider.GEMINI);
+  const systemPrompt = generatePromptFromTemplate(activePromptTemplate, profile, activeConfig.provider !== ModelProvider.GEMINI);
 
   // Reset state
   geminiChatSession = null;
