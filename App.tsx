@@ -335,10 +335,10 @@ const GameContent: React.FC = () => {
       } catch (e) { console.error("Failed to load config"); }
     } else {
       const defaultConfig: AIConfig = {
-        provider: ModelProvider.GEMINI,
+        provider: ModelProvider.DEEPSEEK,
         apiKey: '',
-        baseUrl: '',
-        modelName: 'gemini-2.5-flash'
+        baseUrl: 'https://api.deepseek.com',
+        modelName: 'deepseek-chat'
       };
       setAiConfigState(defaultConfig);
       setAIConfig(defaultConfig);

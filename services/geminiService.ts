@@ -150,12 +150,11 @@ export const initializeGame = async (profile: PlayerProfile): Promise<GameScenar
   // Save profile for later use
   currentProfile = profile;
 
-  // 1. Get API Key
-  // Prioritize config key, then env var (Vite uses import.meta.env)
-  const apiKey = activeConfig?.apiKey || (import.meta as any).env.VITE_API_KEY || '';
+  // Get API Key from config
+  const apiKey = activeConfig?.apiKey || '';
 
-  if (!apiKey && activeConfig?.provider === ModelProvider.GEMINI) {
-    console.warn("No API Key found for Gemini. Please set VITE_API_KEY or configure in settings.");
+  if (!apiKey) {
+    throw new Error("请先在设置中配置 API Key");
   }
 
   const systemPrompt = getSystemInstruction(profile, activeConfig.provider !== ModelProvider.GEMINI);
@@ -287,7 +286,7 @@ export const getFinalEvaluation = async (): Promise<FinalEvaluation> => {
         return JSON.parse(cleanText) as FinalEvaluation;
       } catch (e) {
         // Fallback: Use a fresh content generation call to format the output if chat returns loose text
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+        const ai = new GoogleGenAI({ apiKey: activeConfig!.apiKey });
         const formatResponse = await ai.models.generateContent({
           model: activeConfig!.modelName || 'gemini-2.5-flash',
           contents: `Extract structured data from this text into JSON: ${text}`,
