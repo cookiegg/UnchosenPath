@@ -1086,7 +1086,7 @@ const GameContent: React.FC = () => {
       <header className="fixed top-0 left-0 w-full p-4 z-50 pointer-events-none">
         <div className="max-w-7xl mx-auto flex justify-between items-center bg-academic-950/80 backdrop-blur px-6 py-3 rounded-full border border-academic-800 shadow-lg pointer-events-auto">
           <div className="flex items-center gap-3">
-            <img src="/assets/tag-temp.png" alt="Logo" className="w-12 h-12" />
+            <img src="assets/tag-temp.png" alt="Logo" className="w-12 h-12" />
             <div className="hidden md:flex md:flex-col">
               <h1 className="font-serif text-academic-100 text-lg tracking-wide">
                 未择之路：人生推演 
