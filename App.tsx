@@ -276,6 +276,7 @@ const isUniversityStudent = (grade?: string) => {
 
 const GameContent: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.INTRO);
+  const currentYear = new Date().getFullYear();
   const [profile, setProfile] = useState<PlayerProfile>({
     name: '',
     gender: '男',
@@ -290,6 +291,10 @@ const GameContent: React.FC = () => {
       province: '',
       city: ''
     },
+    currentLocation: {
+      province: '',
+      city: ''
+    },
     mbti: {
       energySource: 'E',
       perception: 'S',
@@ -298,7 +303,10 @@ const GameContent: React.FC = () => {
     },
     profession: '',
     major: '',
-    skills: ''
+    skills: '',
+    customBio: '',
+    simulationStartYear: currentYear,
+    simulationEndYear: currentYear + 10
   });
   const [currentScenario, setCurrentScenario] = useState<GameScenario | null>(null);
   const [finalResult, setFinalResult] = useState<FinalEvaluation | null>(null);
@@ -382,7 +390,7 @@ const GameContent: React.FC = () => {
   };
 
   const handleStartGame = async () => {
-    if (!profile.name || !profile.hometown.province || !profile.hometown.city || !profile.skills) return;
+    if (!profile.name || !profile.hometown.province || !profile.hometown.city || !profile.currentLocation.province || !profile.currentLocation.city || !profile.skills) return;
     if (profile.currentStatus === '学生' && !profile.major) return;
     if (profile.currentStatus !== '学生' && !profile.profession) return;
     if (profile.currentStatus === '学生' && !profile.grade) return;
@@ -464,14 +472,16 @@ const GameContent: React.FC = () => {
   const handleExport = () => {
     if (!finalResult) return;
 
+    const simulationYears = profile.simulationEndYear - profile.simulationStartYear;
     const date = new Date().toLocaleDateString();
-    let content = `# ${profile.name}的十年人生 (2025-2035)\n\n`;
+    let content = `# ${profile.name}的${simulationYears}年人生 (${profile.simulationStartYear}-${profile.simulationEndYear})\n\n`;
     content += `> 生成时间: ${date}\n`;
     content += `> 最终评价: ${finalResult.title} (得分: ${finalResult.score})\n\n`;
 
     content += `## 个人档案\n`;
-    content += `- 院校: ${profile.scoreTier}\n`;
-    content += `- 专业: ${profile.majorInterest}\n`;
+    content += `- 年龄: ${profile.age}岁（${profile.simulationStartYear}年）\n`;
+    content += `- 学历: ${profile.education}${profile.universityTier ? ` (${profile.universityTier})` : ''}\n`;
+    content += `- ${profile.currentStatus === '学生' ? `专业: ${profile.major}` : `职业: ${profile.profession}`}\n`;
     content += `- MBTI: ${profile.mbti.energySource}${profile.mbti.perception}${profile.mbti.decision}${profile.mbti.lifestyle}\n\n`;
 
     content += `## 人生履历\n\n`;
@@ -518,8 +528,8 @@ const GameContent: React.FC = () => {
         </button>
 
         <div className="text-center mb-4">
-          <h1 className="text-2xl font-serif text-academic-50 mb-1">十年·未来推演</h1>
-          <h2 className="text-sm font-serif text-academic-300 italic">2025 - 2035：当信息变得廉价，什么才是你的核心资产？</h2>
+          <h1 className="text-2xl font-serif text-academic-50 mb-1">未择之路·人生推演</h1>
+          <h2 className="text-sm font-serif text-academic-300 italic">当信息变得廉价，什么才是你的核心资产？</h2>
         </div>
 
         <p className="text-academic-400 mb-4 font-light leading-snug text-xs bg-academic-900/50 p-2 rounded border-l-4 border-amber-600">
@@ -562,6 +572,44 @@ const GameContent: React.FC = () => {
               value={profile.age}
               onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 18 })}
             />
+          </div>
+
+          <div className="col-span-1 md:col-span-4 bg-academic-900/30 p-3 rounded border border-academic-700">
+            <label className="block text-amber-500 text-xs font-bold mb-2 uppercase tracking-wider">⏰ 模拟时间段</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-academic-400 text-xs mb-1">起始年份</label>
+                <input
+                  type="number"
+                  min={currentYear}
+                  max={2100}
+                  className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
+                  value={profile.simulationStartYear}
+                  onChange={(e) => {
+                    const startYear = parseInt(e.target.value) || currentYear;
+                    setProfile({ 
+                      ...profile, 
+                      simulationStartYear: startYear,
+                      simulationEndYear: Math.max(startYear + 1, profile.simulationEndYear)
+                    });
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-academic-400 text-xs mb-1">结束年份</label>
+                <input
+                  type="number"
+                  min={profile.simulationStartYear + 1}
+                  max={2100}
+                  className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
+                  value={profile.simulationEndYear}
+                  onChange={(e) => setProfile({ ...profile, simulationEndYear: parseInt(e.target.value) || profile.simulationStartYear + 10 })}
+                />
+              </div>
+            </div>
+            <p className="text-academic-500 text-xs mt-2">
+              将模拟 <span className="text-amber-500 font-bold">{profile.simulationEndYear - profile.simulationStartYear}</span> 年的人生轨迹
+            </p>
           </div>
 
           <div className="col-span-1 md:col-span-2">
@@ -692,11 +740,19 @@ const GameContent: React.FC = () => {
             </select>
           </div>
 
-          <div className="col-span-1 md:col-span-4">
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">籍贯</label>
             <LocationCascader
               value={profile.hometown}
-              onChange={(location) => setProfile({ ...profile, hometown: location })}
+              onChange={(val) => setProfile({ ...profile, hometown: val })}
+            />
+          </div>
+
+          <div className="col-span-1 md:col-span-2">
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">当前所在地</label>
+            <LocationCascader
+              value={profile.currentLocation}
+              onChange={(val) => setProfile({ ...profile, currentLocation: val })}
             />
           </div>
 
@@ -871,63 +927,81 @@ const GameContent: React.FC = () => {
             </div>
           </div>
 
-          <div className="col-span-1 md:col-span-2">
+          <div className="col-span-1 md:col-span-4">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">特长与技能</label>
             <input
               type="text"
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
-              placeholder="例：编程、写作、绘画、运动、音乐、演讲"
               value={profile.skills}
               onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
+              placeholder="例：英语流利、擅长编程、马拉松爱好者、烹饪高手"
             />
           </div>
-        </div>
 
-        {/* AI Status Indicator */}
-        <div className="mt-4 flex justify-center">
-          <div
-            className={`text-xs px-3 py-1 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
-              ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
-              : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
-              }`}
-            onClick={() => setShowConfig(true)}
-          >
-            <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            {isConfigured ? `已配置: ${aiConfig?.provider} / ${aiConfig?.modelName}` : '未配置 AI (点击设置)'}
+          <div className="col-span-1 md:col-span-4">
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">
+              自定义设定 / 备注 <span className="text-academic-500 font-normal normal-case">(选填)</span>
+            </label>
+            <textarea
+              className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm h-24 resize-none"
+              value={profile.customBio || ''}
+              onChange={(e) => setProfile({ ...profile, customBio: e.target.value })}
+              placeholder="在这里写下任何你想补充的设定：
+- 具体的人生目标（如：35岁前财务自由）
+- 特殊的性格怪癖
+- 想要经历的特定剧情
+- 或者只是简单的碎碎念..."
+            />
           </div>
-        </div>
 
-        {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-2 rounded border border-red-800">{error}</div>}
-
-        <div className="mt-6">
-          <div className="mt-8 flex justify-center gap-4">
-            <Button
-              onClick={handleStartGame}
-              disabled={
-                !profile.name ||
-                !profile.hometown.province ||
-                !profile.hometown.city ||
-                !profile.skills ||
-                (profile.currentStatus === '学生' && !profile.major) ||
-                (profile.currentStatus !== '学生' && !profile.profession) ||
-                (profile.currentStatus === '学生' && !profile.grade) ||
-                (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
-                loading
-              }
-              isLoading={loading}
+          {/* AI Status Indicator */}
+          <div className="mt-4 flex justify-center">
+            <div
+              className={`text-xs px-3 py-1 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
+                ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
+                : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
+                }`}
+              onClick={() => setShowConfig(true)}
             >
-              开始模拟人生
-            </Button>
+              <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              {isConfigured ? `已配置: ${aiConfig?.provider} / ${aiConfig?.modelName}` : '未配置 AI (点击设置)'}
+            </div>
+          </div>
 
-            {/* Reset Button (only if there is saved data) */}
-            {localStorage.getItem('life_sim_game_state') && (
-              <button
-                onClick={handleResetGame}
-                className="px-4 py-2 text-academic-500 text-sm hover:text-red-400 transition-colors underline"
+          {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-2 rounded border border-red-800">{error}</div>}
+
+          <div className="mt-6">
+            <div className="mt-8 flex justify-center gap-4">
+              <Button
+                onClick={handleStartGame}
+                disabled={
+                  !profile.name ||
+                  !profile.hometown.province ||
+                  !profile.hometown.city ||
+                  !profile.currentLocation.province ||
+                  !profile.currentLocation.city ||
+                  !profile.skills ||
+                  (profile.currentStatus === '学生' && !profile.major) ||
+                  (profile.currentStatus !== '学生' && !profile.profession) ||
+                  (profile.currentStatus === '学生' && !profile.grade) ||
+                  (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
+                  loading
+                }
+                isLoading={loading}
               >
-                清除存档
-              </button>
-            )}
+                开始模拟人生
+              </Button>
+
+              {/* Reset Button (only if there is saved data) */}
+              {localStorage.getItem('life_sim_game_state') && (
+                <button
+                  onClick={handleResetGame}
+                  className="px-4 py-2 text-academic-500 text-sm hover:text-red-400 transition-colors underline"
+                >
+                  清除存档
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -949,9 +1023,9 @@ const GameContent: React.FC = () => {
         </div>
 
         <div className="text-center mb-8 border-b-2 border-academic-200 pb-6">
-          <h2 className="text-3xl font-serif font-bold mb-2 text-academic-900">2035年·个人档案</h2>
+          <h2 className="text-3xl font-serif font-bold mb-2 text-academic-900">{profile.simulationEndYear}年·个人档案</h2>
           <div className="text-academic-600 text-sm uppercase tracking-widest">
-            {profile.name} | {profile.age + 10}岁 | {profile.education}{profile.universityTier ? ` (${profile.universityTier})` : ''} | {profile.currentStatus === '学生' ? profile.major : profile.profession} | {profile.hometown.province} {profile.hometown.city}
+            {profile.name} | {profile.age + (profile.simulationEndYear - profile.simulationStartYear)}岁 | {profile.education}{profile.universityTier ? ` (${profile.universityTier})` : ''} | {profile.currentStatus === '学生' ? profile.major : profile.profession} | 现居：{profile.currentLocation.province} {profile.currentLocation.city}
           </div>
         </div>
 
@@ -973,7 +1047,7 @@ const GameContent: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-academic-100 p-5 rounded border border-academic-200">
             <h4 className="font-bold text-academic-800 mb-3 flex items-center text-sm uppercase tracking-wider">
-              <span className="text-amber-600 mr-2">●</span> 十年轨迹 (Timeline)
+              <span className="text-amber-600 mr-2">●</span> {profile.simulationEndYear - profile.simulationStartYear}年轨迹 (Timeline)
             </h4>
             <p className="text-academic-700 text-sm whitespace-pre-line leading-relaxed">
               {finalResult.timeline}
@@ -997,6 +1071,11 @@ const GameContent: React.FC = () => {
             📥 导出人生履历
           </Button>
         </div>
+
+        <div className="mt-6 pt-4 border-t border-academic-200 text-center text-xs text-academic-500">
+          <p>未择之路：人生推演模拟器 © 2025 墨渊Transhuman</p>
+          <p className="mt-1">本项目采用 CC BY-NC-SA 4.0 许可协议 | 禁止商业使用</p>
+        </div>
       </div>
     );
   };
@@ -1007,10 +1086,18 @@ const GameContent: React.FC = () => {
       <header className="fixed top-0 left-0 w-full p-4 z-50 pointer-events-none">
         <div className="max-w-7xl mx-auto flex justify-between items-center bg-academic-950/80 backdrop-blur px-6 py-3 rounded-full border border-academic-800 shadow-lg pointer-events-auto">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🎓</span>
-            <h1 className="font-serif text-academic-100 text-lg tracking-wide hidden md:block">
-              十年人生 <span className="text-academic-500 text-sm ml-1">2025-2035</span>
-            </h1>
+            <img src="/assets/tag.svg" alt="Logo" className="w-12 h-12" />
+            <div className="hidden md:block">
+              <h1 className="font-serif text-academic-100 text-lg tracking-wide">
+                未择之路：人生推演 
+                {gameState !== GameState.INTRO && (
+                  <span className="text-academic-500 text-sm ml-1">
+                    {profile.simulationStartYear}-{profile.simulationEndYear}
+                  </span>
+                )}
+              </h1>
+              <p className="text-academic-500 text-xs mt-0.5">@墨渊Transhuman</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

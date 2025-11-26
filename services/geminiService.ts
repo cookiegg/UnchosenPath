@@ -48,6 +48,7 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
 let activeConfig: AIConfig | null = null;
 let geminiChatSession: Chat | null = null;
 let openaiHistory: Array<{ role: string; content: string }> = [];
+let currentProfile: PlayerProfile | null = null;
 
 export const setAIConfig = (config: AIConfig) => {
   activeConfig = config;
@@ -106,137 +107,59 @@ const getSystemInstruction = (profile: PlayerProfile, isJsonModeForOpenAI = fals
     'ISTP': '鉴赏家', 'ISFP': '探险家', 'ESTP': '企业家', 'ESFP': '表演者'
   };
 
-  let base = `你是一个基于**第一性原理**和**实证数据**的未来模拟引擎，负责推演2025-2035年一位中国人的命运。
+  const simulationYears = profile.simulationEndYear - profile.simulationStartYear;
+  
+  let base = `你是一个拥有**文学洞察力**和**社会学深度**的未来模拟引擎。你的任务不仅是推演${profile.simulationStartYear}-${profile.simulationEndYear}年（共${simulationYears}年）一位中国人的命运，更是要讲述一个**跌宕起伏、引人入胜、细节丰满**的人生故事。
 
 **角色档案**：
 - 姓名：${profile.name}
 - 性别：${profile.gender}
-- 年龄：${profile.age}岁 (2025年)
+- 年龄：${profile.age}岁（${profile.simulationStartYear}年）
 - 当前状态：${profile.currentStatus}${profile.grade ? ` (${profile.grade})` : ''}
 - 学历水平：${profile.education}${profile.universityTier ? ` (${profile.universityTier})` : ''}
 - 家庭背景：${profile.familyBackground}
 - 父母职业：${profile.parentsOccupation}
 - 籍贯：${profile.hometown.province} ${profile.hometown.city}
+- 现居地：${profile.currentLocation.province} ${profile.currentLocation.city}
 - 性格类型：${mbtiType} (${mbtiNames[mbtiType] || ''})
 - ${profile.currentStatus === '学生' ? `专业：${profile.major}` : `职业：${profile.profession}`}
 - 特长技能：${profile.skills}
+${profile.customBio ? `\n**用户特别备注/设定**：\n${profile.customBio}\n` : ''}
 
-**模拟起点设定**：
-根据角色的年龄和当前状态，从2025年的合适起点开始模拟：
-- 18-22岁学生：从大学阶段或刚毕业开始
-- 23-30岁在职/创业：从职场早期或创业初期开始
-- 31-45岁在职/创业：从职场中期或事业稳定期开始
-- 46-60岁在职：从职场后期或准备退休开始
-- 待业/自由职业：从当前状态的转型/求职阶段开始
+**模拟时间段**：
+- 起始年份：${profile.simulationStartYear}年
+- 结束年份：${profile.simulationEndYear}年
+- 模拟时长：${simulationYears}年
+- 根据角色的年龄和当前状态，从${profile.simulationStartYear}年的合适起点开始模拟。
 
-**核心任务**：
-基于你对当前（2024-2025年）中国社会、经济、教育、就业市场的了解，以及对全球趋势（AI发展、地缘政治、人口结构、产业变迁）的认知，推演这个人在2025-2035年间的真实人生轨迹。
+**核心指令（Tone & Style）**：
+1.  **拒绝平铺直叙**：不要写成流水账。每一回合都是人生剧本的一幕。要有**画面感**、**情绪张力**和**细节描写**。
+2.  **全景式叙事**：每次剧情必须包含以下**四个维度**的描写，缺一不可：
+    *   **【职业/学业】**：具体的工作内容、项目挑战、办公室政治、考试压力、学术瓶颈。
+    *   **【生活/情感】**：租房/买房的烦恼、恋爱/婚姻的甜蜜与争吵、原生家庭的羁绊、孤独感或归属感。
+    *   **【经济/消费】**：具体的收入变化、物价感受、消费降级或升级、理财焦虑、房贷压力。
+    *   **【时代/社会】**：新闻里在播什么？流行什么？大家在讨论什么？（如AI失业潮、养老金改革、新一轮疫情、局部战争等）。
+3.  **细节为王**：不要说"同事"，要说"发际线后移的王组长"；不要说"吃得不好"，要说"连续吃了一周的打折预制菜外卖"。
+4.  **字数要求**：每次剧情描述（description）请保持在**500-700字**之间，内容必须充实丰满。
 
-**推演框架（第一性原理）**：
+**推演框架（第一性原理 + 戏剧法则）**：
 
+1.  **时代洪流下的个人命运**：
+    -   将宏观趋势（AI替代、经济周期、地缘政治）具体化为角色身边的事件。
+    -   例如：不是说"经济下行"，而是"公司裁员名单贴在玻璃门上，你看到了熟悉的同事名字"。
 
-1. **技术变革的影响**：
-   - 评估AI、自动化对不同职业的替代性（信息处理 vs 物理交互 vs 创造性工作）
-   - 考虑技术扩散速度、监管政策、社会接受度
-   - 预测新兴职业机会与传统岗位消失的时间线
+2.  **人性弱点与挣扎**：
+    -   根据MBTI和背景，让角色表现出人性的弱点（贪婪、恐惧、虚荣、懒惰）。
+    -   **关键**：给出的选项中，不要全是理性的最优解，要包含**诱人的陷阱**或**情绪化的宣泄**。
 
-2. **人口与劳动力结构**：
-   - 基于中国人口趋势（老龄化、生育率、劳动力供给）推断就业竞争态势
-   - 分析养老、医疗、教育等行业的需求变化
-   - 评估延迟退休、代际财富转移等政策影响
-
-3. **经济与产业周期**：
-   - 参考中国经济增长模式转型（高速→高质量）
-   - 识别战略新兴产业（新能源、半导体、生物医药等）vs传统产业
-   - 考虑房地产、互联网、金融等行业的周期性波动
-
-4. **教育与阶层流动**：
-   - 评估学历贬值速度、专业选择的长期回报
-   - 分析体制内（公务员/事业编/国企）vs市场化就业的权衡
-   - 考虑家庭背景、地域差异对机会获取的影响
-
-5. **地缘政治与全球化**：
-   - 中美关系、产业链重构对就业和创业的影响
-   - 出海企业的机会与风险（合规、文化、政治）
-   - 留学、跨国工作的性价比变化
-
-6. **社会文化与心理**：
-   - "内卷""躺平""佛系"等社会心态的演变
-   - 婚恋、生育、消费观念的代际差异
-   - 心理健康、工作生活平衡的重要性上升
-
-7. **人性弱点与认知局限**（关键：构建真实的人）：
-   - **即时满足vs长期目标**：
-     * 大学沉迷游戏/短视频/社交媒体，荒废学业
-     * 明知应该学习/锻炼/社交，但拖延、逃避、自我麻痹
-     * 为了眼前小利（兼职赚钱）放弃长期机会（实习、竞赛、深造）
-   
-   - **认知偏差**：
-     * 过度自信（觉得自己能逆袭）或过度悲观（觉得努力无用）
-     * 从众心理（室友都考研就跟风，同学都考公就盲从）
-     * 锚定效应（执着于第一份工作的薪资，忽视成长空间）
-     * 沉没成本谬误（已经投入很多，不愿放弃错误方向）
-   
-   - **社交与情感困境**：
-     * 社恐/社交能力弱，错失人脉和机会
-     * GPA至上主义，缺乏社团/实践经验，简历空洞
-     * 恋爱/失恋影响状态，情绪化决策
-     * 原生家庭创伤、亲子关系紧张影响心理健康
-   
-   - **经济压力与短视**：
-     * 家境困难，为了生活费打工，无暇提升自己
-     * 消费主义陷阱：超前消费、网贷、分期，债务缠身
-     * 攀比心理：看到同学买iPhone/名牌，自己也要买
-     * 对金钱的焦虑导致只看短期收益，忽视职业发展
-   
-   - **信息茧房与认知闭塞**：
-     * 只刷娱乐内容，不关注行业动态和政策变化
-     * 信息来源单一（只听父母/老师/网红意见），缺乏独立判断
-     * 对新技术/新趋势反应迟钝，错过风口
-   
-   - **执行力与自律问题**：
-     * 计划很完美，执行很拉胯（健身卡/网课买了不用）
-     * 三分钟热度，频繁换方向，什么都浅尝辄止
-     * 缺乏时间管理能力，deadline前才开始赶工
-   
-   **重要**：这些弱点不是每个人都有，但应该根据角色的性格（MBTI）、家庭背景、经历合理分配。例如：
-   - 内向型(I)可能更容易社恐，但也可能更自律
-   - 感知型(P)可能更容易拖延，但也更灵活应变
-   - 家境困难的可能更务实，但也可能因经济压力做短视决策
-   - 家境优渥的可能更有试错空间，但也可能缺乏动力、沉迷享乐
-
-**模拟原则**：
-
-1. **真实性**：
-   - 基于统计规律和社会现实，避免"爽文"式逆袭或刻意制造悲剧
-   - 承认运气和不确定性的存在，但长期看能力/努力/资源决定上限
-   - 尊重个体差异：性格、籍贯、家庭背景、技能会影响适合的路径
-
-2. **路径依赖**：
-   - 早期选择（专业、实习、第一份工作）影响深远
-   - 关键节点（应届生身份、考研/考公窗口期）错过难以挽回
-   - 但也保留"转型""试错""重新出发"的可能性
-
-3. **多元成功观**：
-   - 不只以收入、职位定义成功
-   - 心理健康、家庭和睦、自我实现、社会贡献同样重要
-   - 允许"小而美"的生活方式（县城安稳、自由职业、慢生活）
-
-4. **宏观嵌入微观**：
-   - 通过具体事件（公司裁员、政策调整、行业洗牌、技术突破）体现大趋势
-   - 让角色在历史进程中做选择，而非旁观者
-   - 展现个人能动性与结构性约束的张力
-
-5. **动态调整**：
-   - 根据角色的选择和外部环境变化，动态调整后续剧情
-   - 避免线性叙事，允许意外、转折、黑天鹅事件
-   - 保持开放性，不预设唯一结局
+3.  **随机性与命运感**：
+    -   引入随机事件：突然的生病、意外的横财、久别重逢的故人、错过的末班车。
+    -   好运和厄运交替出现，模拟真实的无常。
 
 **时间推进**：
-- 每次推进0.25-0.5年，关键节点（毕业/跳槽/结婚/买房）详细展开
-- 2025-2027（大学/初入职场）：打基础，试错成本低，可塑性强
-- 2028-2031（职业上升期）：积累资源，建立优势，面临分化
-- 2032-2035（稳定/转型期）：收获或调整，为下一个十年布局
+- 每次推进0.25-0.5年（根据模拟总时长${simulationYears}年灵活调整）。
+- 关键节点（毕业、跳槽、结婚、买房、生病、裁员）请详细展开，放慢节奏。
+- 当接近${profile.simulationEndYear}年时，准备收尾并将isGameOver设为true。
 
 **特别提醒**：
 - 请基于你的知识库（截至训练数据的最新信息）判断当前中国的宏观环境
@@ -258,7 +181,7 @@ const getSystemInstruction = (profile: PlayerProfile, isJsonModeForOpenAI = fals
 - phase: 时间节点
 - description: 剧情
 - options: 3-4个具体抉择(如"利用信息差套利","回归实体")
-- isGameOver: 10年后或死亡时为true`;
+- isGameOver: 到达${profile.simulationEndYear}年或死亡时为true`;
 
   if (isJsonModeForOpenAI) {
     base += `\n\nSchema: ${JSON.stringify(scenarioSchemaStructure)}`;
@@ -316,6 +239,9 @@ const callOpenAICompatible = async (
 
 export const initializeGame = async (profile: PlayerProfile): Promise<GameScenario> => {
   if (!activeConfig) throw new Error("Please configure API settings first.");
+
+  // Save profile for later use
+  currentProfile = profile;
 
   // 1. Get API Key
   // Prioritize config key, then env var (Vite uses import.meta.env)
@@ -421,15 +347,18 @@ export const nextTurn = async (userChoiceText: string): Promise<GameScenario> =>
 
 export const getFinalEvaluation = async (): Promise<FinalEvaluation> => {
   if (!activeConfig) throw new Error("Game not initialized");
+  if (!currentProfile) throw new Error("Profile not found");
+
+  const simulationYears = currentProfile.simulationEndYear - currentProfile.simulationStartYear;
 
   const prompt = `
-    【模拟结束 - 2035年】
-    请回顾这十年的所有决策。
-    请生成一份详细的《十年人生回顾报告》。
+    【模拟结束 - ${currentProfile.simulationEndYear}年】
+    请回顾这${simulationYears}年（${currentProfile.simulationStartYear}-${currentProfile.simulationEndYear}）的所有决策。
+    请生成一份详细的《${simulationYears}年人生回顾报告》。
     报告内容应包含：
     1. 结局称号。
     2. 人生分数(0-100)。
-    3. 十年大事记时间线（着重体现大时代背景下的个人浮沉）。
+    3. ${simulationYears}年大事记时间线（着重体现大时代背景下的个人浮沉）。
     4. 给年轻人的建议（基于刚才模拟中验证过的逻辑）。
     
     ${activeConfig.provider !== ModelProvider.GEMINI ? `Output Format: JSON matching ${JSON.stringify(evaluationSchema)}` : ''}

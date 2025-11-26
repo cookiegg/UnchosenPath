@@ -19,6 +19,10 @@ export interface PlayerProfile {
     province: string;
     city: string;
   }; // 籍贯（省市结构化数据）
+  currentLocation: {
+    province: string;
+    city: string;
+  }; // 当前所在地
   grade?: string; // 年级 (仅当 currentStatus 为 '学生' 时使用)
   universityTier?: string; // 高校层次 (仅当 grade 为大学/研究生时使用)
   mbti: {
@@ -30,6 +34,9 @@ export interface PlayerProfile {
   profession?: string; // 职业 (非学生状态)
   major?: string; // 专业 (学生状态)
   skills: string; // 特长和技能
+  customBio?: string; // 自定义备注/故事设定
+  simulationStartYear: number; // 模拟起始年份
+  simulationEndYear: number; // 模拟结束年份
 }
 
 export interface GameOption {
