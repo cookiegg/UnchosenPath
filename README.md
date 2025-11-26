@@ -1,7 +1,21 @@
-# 人生模拟器 - 项目技术文档
+# 未择之路：人生推演模拟器
 
 <div align="center">
   <img src="assets/logo.png" alt="人生模拟器 Logo" width="200"/>
+  
+  <p>
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+    </a>
+    <img src="https://img.shields.io/badge/AI-Gemini%20%7C%20DeepSeek%20%7C%20OpenAI-blue" alt="AI Support">
+    <img src="https://img.shields.io/badge/TypeScript-React-61DAFB" alt="Tech Stack">
+  </p>
+  
+  <p>
+    <a href="https://github.com/cookiegg">GitHub</a> •
+    <a href="https://x.com/XuefW82242">X (Twitter)</a> •
+    <a href="https://v.douyin.com/EvusAOjyPXQ">抖音</a>
+  </p>
 </div>
 
 ## 📖 项目概述
@@ -548,14 +562,12 @@ A: 访问对应 AI 提供商的官网注册并获取 API Key。
 
 ## 📄 许可证
 
-本项目采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可协议。
+本项目采用 [MIT License](LICENSE) 开源许可协议。
 
 **这意味着：**
-- ✅ 可以自由分享和修改本项目
-- ✅ 必须署名原作者：**墨渊Transhuman**
-- ✅ 修改后的作品必须使用相同许可协议
-- ❌ 不得用于商业目的
-- ❌ 商业化权利由原作者保留
+- ✅ 可以自由使用、复制、修改、合并、发布、分发、再授权和/或销售本软件
+- ✅ 可以用于商业目的
+- ✅ 唯一要求：在所有副本中包含版权声明和许可声明
 
 Copyright © 2025 墨渊Transhuman. All rights reserved.
 

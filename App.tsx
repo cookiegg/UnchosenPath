@@ -1074,7 +1074,7 @@ const GameContent: React.FC = () => {
 
         <div className="mt-6 pt-4 border-t border-academic-200 text-center text-xs text-academic-500">
           <p>未择之路：人生推演模拟器 © 2025 墨渊Transhuman</p>
-          <p className="mt-1">本项目采用 CC BY-NC-SA 4.0 许可协议 | 禁止商业使用</p>
+          <p className="mt-1">本项目采用 MIT 开源许可协议</p>
         </div>
       </div>
     );
