@@ -1,8 +1,9 @@
 {
-  "name": "十年：2025-2035人生模拟",
+  "name": "unchosen-path",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "homepage": "https://cookiegg.github.io/UnchosenPath/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
