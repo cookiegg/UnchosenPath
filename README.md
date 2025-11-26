@@ -54,7 +54,7 @@
 ```bash
 # 1. 克隆项目
 git clone <repository-url>
-cd life-simulator
+cd UnchosenPath
 
 # 2. 安装依赖
 npm install
