@@ -572,6 +572,7 @@ const GameContent: React.FC = () => {
               value={profile.age}
               onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 18 })}
             />
+            <p className="text-academic-500 text-xs mt-1">填写模拟起始年时的年龄</p>
           </div>
 
           <div className="col-span-1 md:col-span-4 bg-academic-900/30 p-3 rounded border border-academic-700">
@@ -955,9 +956,9 @@ const GameContent: React.FC = () => {
           </div>
 
           {/* AI Status Indicator */}
-          <div className="mt-4 flex justify-center">
+          <div className="mt-6 flex justify-center">
             <div
-              className={`text-xs px-3 py-1 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
+              className={`text-xs px-4 py-2 rounded-full border cursor-pointer flex items-center gap-2 transition-colors ${isConfigured
                 ? 'bg-green-900/30 border-green-800 text-green-400 hover:bg-green-900/50'
                 : 'bg-red-900/30 border-red-800 text-red-400 hover:bg-red-900/50'
                 }`}
@@ -968,40 +969,39 @@ const GameContent: React.FC = () => {
             </div>
           </div>
 
-          {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-2 rounded border border-red-800">{error}</div>}
+          {error && <div className="text-red-400 text-sm text-center mt-4 bg-red-900/20 p-3 rounded border border-red-800">{error}</div>}
 
-          <div className="mt-6">
-            <div className="mt-8 flex justify-center gap-4">
-              <Button
-                onClick={handleStartGame}
-                disabled={
-                  !profile.name ||
-                  !profile.hometown.province ||
-                  !profile.hometown.city ||
-                  !profile.currentLocation.province ||
-                  !profile.currentLocation.city ||
-                  !profile.skills ||
-                  (profile.currentStatus === '学生' && !profile.major) ||
-                  (profile.currentStatus !== '学生' && !profile.profession) ||
-                  (profile.currentStatus === '学生' && !profile.grade) ||
-                  (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
-                  loading
-                }
-                isLoading={loading}
+          {/* Action Buttons */}
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <Button
+              onClick={handleStartGame}
+              disabled={
+                !profile.name ||
+                !profile.hometown.province ||
+                !profile.hometown.city ||
+                !profile.currentLocation.province ||
+                !profile.currentLocation.city ||
+                !profile.skills ||
+                (profile.currentStatus === '学生' && !profile.major) ||
+                (profile.currentStatus !== '学生' && !profile.profession) ||
+                (profile.currentStatus === '学生' && !profile.grade) ||
+                (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
+                loading
+              }
+              isLoading={loading}
+            >
+              开始模拟人生
+            </Button>
+
+            {/* Reset Button (only if there is saved data) */}
+            {localStorage.getItem('life_sim_game_state') && (
+              <button
+                onClick={handleResetGame}
+                className="px-4 py-2 text-academic-500 text-sm hover:text-red-400 transition-colors underline"
               >
-                开始模拟人生
-              </Button>
-
-              {/* Reset Button (only if there is saved data) */}
-              {localStorage.getItem('life_sim_game_state') && (
-                <button
-                  onClick={handleResetGame}
-                  className="px-4 py-2 text-academic-500 text-sm hover:text-red-400 transition-colors underline"
-                >
-                  清除存档
-                </button>
-              )}
-            </div>
+                清除存档
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1087,7 +1087,7 @@ const GameContent: React.FC = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center bg-academic-950/80 backdrop-blur px-6 py-3 rounded-full border border-academic-800 shadow-lg pointer-events-auto">
           <div className="flex items-center gap-3">
             <img src="/assets/tag.svg" alt="Logo" className="w-12 h-12" />
-            <div className="hidden md:block">
+            <div className="hidden md:flex md:flex-col">
               <h1 className="font-serif text-academic-100 text-lg tracking-wide">
                 未择之路：人生推演 
                 {gameState !== GameState.INTRO && (
@@ -1096,7 +1096,44 @@ const GameContent: React.FC = () => {
                   </span>
                 )}
               </h1>
-              <p className="text-academic-500 text-xs mt-0.5">@墨渊Transhuman</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-academic-500 text-xs">@墨渊Transhuman</span>
+                <div className="flex items-center gap-1.5">
+                  <a 
+                    href="https://github.com/cookiegg" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-academic-500 hover:text-amber-500 transition-colors"
+                    title="GitHub"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                  </a>
+                  <a 
+                    href="https://x.com/XuefW82242" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-academic-500 hover:text-amber-500 transition-colors"
+                    title="X (Twitter)"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                  </a>
+                  <a 
+                    href="https://v.douyin.com/EvusAOjyPXQ" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-academic-500 hover:text-amber-500 transition-colors"
+                    title="抖音"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                    </svg>
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
