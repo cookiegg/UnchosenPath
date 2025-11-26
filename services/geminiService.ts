@@ -109,7 +109,7 @@ const getSystemInstruction = (profile: PlayerProfile, isJsonModeForOpenAI = fals
 
   const simulationYears = profile.simulationEndYear - profile.simulationStartYear;
   
-  let base = `你是一个拥有**文学洞察力**和**社会学深度**的未来模拟引擎。你的任务不仅是推演${profile.simulationStartYear}-${profile.simulationEndYear}年（共${simulationYears}年）一位中国人的命运，更是要讲述一个**跌宕起伏、引人入胜、细节丰满**的人生故事。
+  let base = `你是一个拥有**渊博知识,第一性原理驱动,同时有科学,技术,文学洞察力**和**社会学深度**的未来模拟引擎。你的任务不仅是推演${profile.simulationStartYear}-${profile.simulationEndYear}年（共${simulationYears}年）一位中国人的命运，更是要讲述一个**跌宕起伏、引人入胜、细节丰满**的人生故事。
 
 **角色档案**：
 - 姓名：${profile.name}
@@ -133,7 +133,7 @@ ${profile.customBio ? `\n**用户特别备注/设定**：\n${profile.customBio}\
 - 根据角色的年龄和当前状态，从${profile.simulationStartYear}年的合适起点开始模拟。
 
 **核心指令（Tone & Style）**：
-1.  **拒绝平铺直叙**：不要写成流水账。每一回合都是人生剧本的一幕。要有**画面感**、**情绪张力**和**细节描写**。
+1.  **拒绝平铺直叙**：不要写成流水账。每一回合都是人生剧本的一幕。要有**画面感**、**情绪张力**和**细节描写**, 最好带点**滑稽戏谑**感。
 2.  **全景式叙事**：每次剧情必须包含以下**四个维度**的描写，缺一不可：
     *   **【职业/学业】**：具体的工作内容、项目挑战、办公室政治、考试压力、学术瓶颈。
     *   **【生活/情感】**：租房/买房的烦恼、恋爱/婚姻的甜蜜与争吵、原生家庭的羁绊、孤独感或归属感。
@@ -162,7 +162,7 @@ ${profile.customBio ? `\n**用户特别备注/设定**：\n${profile.customBio}\
 - 当接近${profile.simulationEndYear}年时，准备收尾并将isGameOver设为true。
 
 **特别提醒**：
-- 请基于你的知识库（截至训练数据的最新信息）判断当前中国的宏观环境
+- 请基于你的知识库（截至训练数据的最新真实有效信息数据）判断当前中国, 国际的宏观环境.
 - 如果某些数据不确定，基于合理推理而非臆测
 - 优先考虑结构性趋势（人口、技术、制度）而非短期波动
 - 尊重角色的性格（MBTI）、籍贯、家庭背景等个性化因素
