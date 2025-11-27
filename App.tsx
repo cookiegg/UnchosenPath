@@ -1359,9 +1359,10 @@ const GameContent: React.FC = () => {
             <div
               className="text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
               onClick={() => setShowPromptEditor(true)}
+              title="选择系统提示词模板"
             >
               <span>📝</span>
-              <span>{getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '提示词'}</span>
+              <span>系统提示词设置: {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '默认'}</span>
             </div>
 
             {/* 保存资料按钮 */}
