@@ -7,6 +7,8 @@ export enum GameState {
   ERROR = 'ERROR'
 }
 
+import { SupportedCountry } from './src/i18n/types';
+
 export interface PlayerProfile {
   name: string;
   gender: string;
@@ -37,6 +39,7 @@ export interface PlayerProfile {
   customBio?: string; // 自定义备注/故事设定
   simulationStartYear: number; // 模拟起始年份
   simulationEndYear: number; // 模拟结束年份
+  country: SupportedCountry; // 推演背景国家
 }
 
 export interface GameOption {

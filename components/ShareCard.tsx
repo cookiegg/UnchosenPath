@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { GameScenario } from '../types';
 import tagPng from '../assets/tag-square.png';
@@ -13,6 +14,9 @@ interface ShareCardProps {
 
 const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
   ({ scenario, lastChoice, playerName }, ref) => {
+    const { t, i18n } = useTranslation();
+    const isEnglish = i18n.language === 'en-US';
+    
     return (
       <div
         ref={ref}
@@ -24,13 +28,17 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
           <div className="flex items-center gap-2">
             <img src={tagPng} alt="logo" className="h-12 w-auto" />
             <div>
-              <div className="text-amber-500 font-bold text-sm">未择之路</div>
-              <div className="text-academic-400 text-xs">人生推演</div>
+              <div className="text-amber-500 font-bold text-sm">
+                {isEnglish ? 'The Road Not Taken' : '未择之路'}
+              </div>
+              <div className="text-academic-400 text-xs">
+                {isEnglish ? 'Life Simulation' : '人生推演'}
+              </div>
             </div>
           </div>
           {playerName && (
             <div className="text-academic-400 text-xs">
-              {playerName} 的人生
+              {t('share.playerLife', { name: playerName })}
             </div>
           )}
         </div>
@@ -43,7 +51,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
         {/* Last Choice */}
         {lastChoice && (
           <div className="px-5 py-4 border-b border-academic-700">
-            <div className="text-academic-500 text-xs mb-1">💬 我的选择</div>
+            <div className="text-academic-500 text-xs mb-1">💬 {t('share.myChoice')}</div>
             <div className="text-academic-200 text-sm leading-relaxed bg-academic-800/50 p-3 rounded border-l-2 border-amber-600">
               「{lastChoice}」
             </div>
@@ -53,7 +61,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
         {/* Feedback */}
         {scenario.feedback && (
           <div className="px-5 py-4 border-b border-academic-700">
-            <div className="text-academic-500 text-xs mb-1">📖 结果</div>
+            <div className="text-academic-500 text-xs mb-1">📖 {t('evaluation.result')}</div>
             <div className="text-academic-300 text-sm italic leading-relaxed">
               "{scenario.feedback}"
             </div>
@@ -62,7 +70,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
 
         {/* Description */}
         <div className="px-5 py-4 border-b border-academic-700">
-          <div className="text-academic-500 text-xs mb-2">📜 当前情境</div>
+          <div className="text-academic-500 text-xs mb-2">📜 {t('share.currentSituation')}</div>
           <div className="text-academic-100 text-sm leading-relaxed">
             {scenario.description.length > 300
               ? scenario.description.slice(0, 300) + '...'
@@ -72,16 +80,16 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
 
         {/* Options Preview */}
         <div className="px-5 py-4 border-b border-academic-700">
-          <div className="text-academic-500 text-xs mb-2">🎯 面临的选择</div>
+          <div className="text-academic-500 text-xs mb-2">🎯 {t('share.facingChoices')}</div>
           <div className="space-y-1.5">
-            {scenario.options.slice(0, 3).map((option, idx) => (
+            {scenario.options.slice(0, 3).map((option) => (
               <div key={option.id} className="text-academic-300 text-xs flex items-start gap-2">
                 <span className="text-amber-500">❧</span>
                 <span>{option.text.length > 40 ? option.text.slice(0, 40) + '...' : option.text}</span>
               </div>
             ))}
             {scenario.options.length > 3 && (
-              <div className="text-academic-500 text-xs">...还有更多选择</div>
+              <div className="text-academic-500 text-xs">{t('share.moreChoices')}</div>
             )}
           </div>
         </div>
@@ -89,7 +97,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
         {/* Footer */}
         <div className="px-5 py-4 bg-academic-950 flex items-center justify-between">
           <div>
-            <div className="text-academic-400 text-xs mb-1">扫码查看项目</div>
+            <div className="text-academic-400 text-xs mb-1">{t('share.viewProject')}</div>
             <div className="text-amber-500 text-[10px] font-mono break-all max-w-[200px]">
               github.com/cookiegg/UnchosenPath
             </div>
@@ -102,7 +110,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               bgColor="#ffffff"
               fgColor="#1a1a2e"
             />
-            {/* 中间 logo 叠加 */}
+            {/* Center logo overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
               <img src={tagPng} alt="logo" className="w-4 h-4 bg-white p-0.5 rounded-sm" />
             </div>

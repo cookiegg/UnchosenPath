@@ -1,14 +1,30 @@
 import React, { useState, useEffect, useRef, ErrorInfo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GameState, PlayerProfile, GameScenario, GameOption, FinalEvaluation, AIConfig, ModelProvider, HistoryItem, HistoryNode, GameTree } from './types';
-import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig, setPromptTemplate, restoreSession } from './services/geminiService';
-import { getAllTemplates, saveCustomTemplate, deleteCustomTemplate, PromptTemplate } from './services/promptTemplates';
+import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig, setTemplate, restoreSession } from './services/geminiService';
+import {
+  getAllTemplates,
+  getTemplateById,
+  getSelectedTemplateId,
+  setSelectedTemplateId,
+  saveCustomTemplate,
+  deleteCustomTemplate,
+  getTemplateName,
+  getTemplateDescription,
+  PromptTemplate,
+} from './services/systemPrompts';
 import Button from './components/Button';
 import ScenarioCard from './components/ScenarioCard';
 import Tooltip from './components/Tooltip';
 import LocationCascader from './components/LocationCascader';
 import ProfessionAutocomplete from './components/ProfessionAutocomplete';
 import HistoryTree from './components/HistoryTree';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import CountrySelector from './components/CountrySelector';
 import logoImage from './assets/tag-square.png';
+import { SupportedCountry, SupportedLanguage, DEFAULT_COUNTRY, COUNTRY_STORAGE_KEY } from './src/i18n/types';
+import { getCountryContext } from './src/i18n/countries';
+import './src/i18n'; // Initialize i18n
 
 // --- PRESETS FOR PROVIDERS ---
 const PROVIDER_PRESETS: Record<string, Partial<AIConfig>> = {
@@ -95,6 +111,7 @@ const ConfigModal: React.FC<{
   onSave: (config: AIConfig) => void;
   initialConfig: AIConfig | null;
 }> = ({ isOpen, onClose, onSave, initialConfig }) => {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<AIConfig>({
     provider: ModelProvider.GEMINI,
     apiKey: '',
@@ -126,53 +143,53 @@ const ConfigModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm fade-in">
       <div className="bg-academic-900 border border-academic-600 p-6 rounded-xl w-full max-w-md shadow-2xl">
         <h3 className="text-xl font-serif text-academic-50 mb-4 flex items-center">
-          <span className="text-amber-500 mr-2">⚙</span> 模型配置 (AI Settings)
+          <span className="text-amber-500 mr-2">⚙</span> {t('config.title')}
         </h3>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-academic-300 text-xs font-bold mb-2">服务提供商 (Provider)</label>
+            <label className="block text-academic-300 text-xs font-bold mb-2">{t('config.provider')}</label>
             <select
               className="w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded focus:border-amber-600 outline-none"
               value={config.provider}
               onChange={(e) => handleProviderChange(e.target.value as ModelProvider)}
             >
-              <option value={ModelProvider.GEMINI}>Google Gemini (推荐)</option>
-              <option value={ModelProvider.DEEPSEEK}>DeepSeek (深度求索)</option>
-              <option value={ModelProvider.MOONSHOT}>Kimi (月之暗面)</option>
-              <option value={ModelProvider.ALIYUN}>Qwen (通义千问)</option>
-              <option value={ModelProvider.ZHIPU}>GLM (智谱AI)</option>
-              <option value={ModelProvider.OPENAI}>OpenAI / ChatGPT</option>
-              <option value={ModelProvider.CUSTOM}>Custom (自定义)</option>
+              <option value={ModelProvider.GEMINI}>{t('config.providers.gemini')}</option>
+              <option value={ModelProvider.DEEPSEEK}>{t('config.providers.deepseek')}</option>
+              <option value={ModelProvider.MOONSHOT}>{t('config.providers.moonshot')}</option>
+              <option value={ModelProvider.ALIYUN}>{t('config.providers.aliyun')}</option>
+              <option value={ModelProvider.ZHIPU}>{t('config.providers.zhipu')}</option>
+              <option value={ModelProvider.OPENAI}>{t('config.providers.openai')}</option>
+              <option value={ModelProvider.CUSTOM}>{t('config.providers.custom')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-academic-300 text-xs font-bold mb-2">API Key {isGemini && "(可选，留空则尝试使用环境变量)"}</label>
+            <label className="block text-academic-300 text-xs font-bold mb-2">{t('config.apiKey')} {isGemini && t('config.apiKeyOptional')}</label>
             <input
               type="password"
               className="w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded focus:border-amber-600 outline-none"
               value={config.apiKey}
               onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-              placeholder={isGemini ? "自动使用环境变量 (如有)" : "sk-..."}
+              placeholder={isGemini ? t('config.apiKeyPlaceholder') : "sk-..."}
             />
           </div>
 
           {config.provider !== ModelProvider.GEMINI && (
             <div>
-              <label className="block text-academic-300 text-xs font-bold mb-2">Base URL</label>
+              <label className="block text-academic-300 text-xs font-bold mb-2">{t('config.baseUrl')}</label>
               <input
                 type="text"
                 className="w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded focus:border-amber-600 outline-none"
                 value={config.baseUrl}
                 onChange={(e) => setConfig({ ...config, baseUrl: e.target.value })}
-                placeholder="https://api.example.com/v1"
+                placeholder={t('config.baseUrlPlaceholder')}
               />
             </div>
           )}
 
           <div>
-            <label className="block text-academic-300 text-xs font-bold mb-2">模型名称 (Model Name)</label>
+            <label className="block text-academic-300 text-xs font-bold mb-2">{t('config.modelName')}</label>
             <input
               type="text"
               className="w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded focus:border-amber-600 outline-none"
@@ -183,11 +200,11 @@ const ConfigModal: React.FC<{
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button variant="secondary" onClick={onClose}>取消</Button>
-          <Button onClick={() => onSave(config)}>保存设置</Button>
+          <Button variant="secondary" onClick={onClose}>{t('buttons.cancel')}</Button>
+          <Button onClick={() => onSave(config)}>{t('config.saveSettings')}</Button>
         </div>
         <p className="text-xs text-academic-500 mt-4 text-center">
-          配置仅保存在本地浏览器缓存中。
+          {t('config.localStorageNote')}
         </p>
       </div>
     </div>
@@ -202,6 +219,7 @@ const HistoryModal: React.FC<{
   onNodeClick?: (nodeId: string) => void;
   currentNodeId?: string | null;
 }> = ({ isOpen, onClose, history, gameTree, onNodeClick, currentNodeId }) => {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<'list' | 'tree'>('tree');
 
   if (!isOpen) return null;
@@ -238,7 +256,7 @@ const HistoryModal: React.FC<{
       <div className="bg-academic-900 border border-academic-600 rounded-xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-academic-700 flex justify-between items-center bg-academic-950 rounded-t-xl">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-serif text-academic-100">人生履历</h2>
+            <h2 className="text-xl font-serif text-academic-100">{t('history.title')}</h2>
             {hasTree && (
               <div className="flex bg-academic-800 rounded-lg p-0.5">
                 <button
@@ -248,7 +266,7 @@ const HistoryModal: React.FC<{
                     : 'text-academic-400 hover:text-white'
                     }`}
                 >
-                  📋 列表
+                  📋 {t('nav.list')}
                 </button>
                 <button
                   onClick={() => setViewMode('tree')}
@@ -257,12 +275,12 @@ const HistoryModal: React.FC<{
                     : 'text-academic-400 hover:text-white'
                     }`}
                 >
-                  🌳 树形
+                  🌳 {t('nav.tree')}
                 </button>
               </div>
             )}
             {hasBranches && (
-              <span className="text-academic-500 text-xs">（点击节点可回溯）</span>
+              <span className="text-academic-500 text-xs">{t('nav.clickToBacktrack')}</span>
             )}
           </div>
           <button onClick={onClose} className="text-academic-400 hover:text-white transition-colors">
@@ -272,7 +290,7 @@ const HistoryModal: React.FC<{
 
         <div className="flex-1 overflow-hidden">
           {!hasTree && history.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-academic-500">暂无记录</div>
+            <div className="h-full flex items-center justify-center text-academic-500">{t('history.noRecords')}</div>
           ) : viewMode === 'tree' && hasTree ? (
             // 树形可视化视图
             <HistoryTree
@@ -306,14 +324,14 @@ const HistoryModal: React.FC<{
                     <div className="text-xs text-amber-500 font-bold mb-1 uppercase tracking-wider flex items-center gap-2">
                       {node.phase}
                       {currentNodeId === node.id && (
-                        <span className="text-[10px] bg-amber-600 text-white px-1.5 py-0.5 rounded">当前</span>
+                        <span className="text-[10px] bg-amber-600 text-white px-1.5 py-0.5 rounded">{t('game.current')}</span>
                       )}
                     </div>
                     <div className="text-academic-300 mb-2 text-sm italic line-clamp-2">
                       {node.description}
                     </div>
                     <div className="bg-academic-950/50 p-3 rounded border border-academic-800">
-                      <span className="text-academic-500 text-xs mr-2">你的选择:</span>
+                      <span className="text-academic-500 text-xs mr-2">{t('history.yourChoice')}</span>
                       <span className="text-academic-100 font-medium">{node.choiceText}</span>
                     </div>
                     {node.feedback && (
@@ -361,6 +379,7 @@ const ConfirmModal: React.FC<{
   title: string;
   message: string;
 }> = ({ isOpen, onClose, onConfirm, title, message }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -370,12 +389,12 @@ const ConfirmModal: React.FC<{
         <h3 className="text-xl font-serif text-academic-100 mb-2">{title}</h3>
         <p className="text-academic-400 mb-6 text-sm">{message}</p>
         <div className="flex gap-3 justify-center">
-          <Button variant="secondary" onClick={onClose}>取消</Button>
+          <Button variant="secondary" onClick={onClose}>{t('buttons.cancel')}</Button>
           <button
             onClick={onConfirm}
             className="px-6 py-2 bg-red-900/50 border border-red-800 text-red-200 rounded hover:bg-red-800 transition-colors"
           >
-            确认重置
+            {t('buttons.confirmReset')}
           </button>
         </div>
       </div>
@@ -383,13 +402,15 @@ const ConfirmModal: React.FC<{
   );
 };
 
-// Prompt Editor Modal
+// Prompt Editor Modal - Full template editing support
 const PromptEditorModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   selectedId: string;
-  onSelectTemplate: (id: string, template: string) => void;
+  onSelectTemplate: (id: string, customTemplate?: string) => void;
 }> = ({ isOpen, onClose, selectedId, onSelectTemplate }) => {
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language as SupportedLanguage;
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<string>('');
   const [editingName, setEditingName] = useState<string>('');
@@ -398,20 +419,20 @@ const PromptEditorModal: React.FC<{
   useEffect(() => {
     if (isOpen) {
       setTemplates(getAllTemplates());
-      const current = getAllTemplates().find(t => t.id === selectedId);
+      const current = getTemplateById(selectedId);
       if (current) {
         setEditingTemplate(current.template);
-        setEditingName(current.name);
+        setEditingName(getTemplateName(current, currentLanguage));
       }
     }
-  }, [isOpen, selectedId]);
+  }, [isOpen, selectedId, currentLanguage]);
 
   const handleSelectTemplate = (id: string) => {
-    const template = templates.find(t => t.id === id);
+    const template = getTemplateById(id);
     if (template) {
       setEditingTemplate(template.template);
-      setEditingName(template.name);
-      onSelectTemplate(id, template.template);
+      setEditingName(getTemplateName(template, currentLanguage));
+      onSelectTemplate(id);
     }
   };
 
@@ -419,13 +440,14 @@ const PromptEditorModal: React.FC<{
     const customId = `custom_${Date.now()}`;
     const newTemplate: PromptTemplate = {
       id: customId,
-      name: editingName || '自定义模板',
-      description: '用户自定义的提示词模板',
-      template: editingTemplate
+      name: { 'zh-CN': editingName || '自定义模板', 'en-US': editingName || 'Custom Template' },
+      description: { 'zh-CN': '用户自定义的提示词模板', 'en-US': 'User-defined prompt template' },
+      template: editingTemplate,
+      isCustom: true
     };
     saveCustomTemplate(newTemplate);
     setTemplates(getAllTemplates());
-    onSelectTemplate(customId, editingTemplate);
+    onSelectTemplate(customId);
     setIsEditing(false);
   };
 
@@ -434,7 +456,7 @@ const PromptEditorModal: React.FC<{
       deleteCustomTemplate(id);
       setTemplates(getAllTemplates());
       if (selectedId === id) {
-        onSelectTemplate('v1', templates.find(t => t.id === 'v1')?.template || '');
+        onSelectTemplate('classic');
       }
     }
   };
@@ -446,7 +468,7 @@ const PromptEditorModal: React.FC<{
       <div className="bg-academic-900 border border-academic-600 rounded-xl w-full max-w-6xl h-[95vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-academic-700 flex justify-between items-center">
           <h3 className="text-xl font-serif text-academic-50 flex items-center">
-            <span className="text-amber-500 mr-2">📝</span> 系统提示词设置
+            <span className="text-amber-500 mr-2">📝</span> {t('promptEditor.title')}
           </h3>
           <button onClick={onClose} className="text-academic-400 hover:text-white">✕</button>
         </div>
@@ -454,27 +476,27 @@ const PromptEditorModal: React.FC<{
         <div className="flex flex-1 overflow-hidden">
           {/* Template List */}
           <div className="w-1/3 border-r border-academic-700 p-4 overflow-y-auto">
-            <div className="text-xs text-academic-500 uppercase tracking-wider mb-3">选择模板</div>
+            <div className="text-xs text-academic-500 uppercase tracking-wider mb-3">{t('promptEditor.selectTemplate')}</div>
             <div className="space-y-2">
-              {templates.map(t => (
+              {templates.map(tmpl => (
                 <div
-                  key={t.id}
-                  className={`p-3 rounded cursor-pointer transition-colors ${selectedId === t.id
+                  key={tmpl.id}
+                  className={`p-3 rounded cursor-pointer transition-colors ${selectedId === tmpl.id
                     ? 'bg-amber-600/20 border border-amber-600'
                     : 'bg-academic-800 border border-academic-700 hover:border-academic-500'
                     }`}
-                  onClick={() => handleSelectTemplate(t.id)}
+                  onClick={() => handleSelectTemplate(tmpl.id)}
                 >
                   <div className="flex justify-between items-start">
-                    <div className="font-medium text-academic-100 text-sm">{t.name}</div>
-                    {t.id.startsWith('custom_') && (
+                    <div className="font-medium text-academic-100 text-sm">{getTemplateName(tmpl, currentLanguage)}</div>
+                    {tmpl.isCustom && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteCustom(t.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteCustom(tmpl.id); }}
                         className="text-red-400 hover:text-red-300 text-xs"
                       >🗑</button>
                     )}
                   </div>
-                  <div className="text-xs text-academic-500 mt-1">{t.description}</div>
+                  <div className="text-xs text-academic-500 mt-1">{getTemplateDescription(tmpl, currentLanguage)}</div>
                 </div>
               ))}
             </div>
@@ -484,13 +506,13 @@ const PromptEditorModal: React.FC<{
           <div className="flex-1 p-4 flex flex-col">
             <div className="flex justify-between items-center mb-3">
               <div className="text-xs text-academic-500 uppercase tracking-wider">
-                {isEditing ? '编辑模板' : '模板预览'}
+                {isEditing ? t('promptEditor.editing') : t('promptEditor.preview')}
               </div>
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="text-xs px-3 py-1 bg-academic-800 border border-academic-600 rounded text-academic-300 hover:text-white"
               >
-                {isEditing ? '取消编辑' : '✏️ 编辑'}
+                {isEditing ? t('promptEditor.cancelEdit') : `✏️ ${t('promptEditor.edit')}`}
               </button>
             </div>
 
@@ -499,7 +521,7 @@ const PromptEditorModal: React.FC<{
                 type="text"
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
-                placeholder="模板名称"
+                placeholder={t('promptEditor.templateName')}
                 className="mb-2 w-full bg-academic-950 border border-academic-700 text-academic-100 p-2 rounded text-sm"
               />
             )}
@@ -510,23 +532,23 @@ const PromptEditorModal: React.FC<{
               readOnly={!isEditing}
               className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-4 rounded text-sm font-mono resize-none leading-relaxed ${isEditing ? 'focus:border-amber-600 focus:outline-none' : 'opacity-80'
                 }`}
-              placeholder="在这里编辑提示词模板..."
+              placeholder={t('promptEditor.templatePlaceholder')}
             />
 
             <div className="text-xs text-academic-600 mt-2">
-              可用变量: {'{{startYear}}'}, {'{{endYear}}'}, {'{{years}}'}, {'{{profileSection}}'}
+              {t('promptEditor.variables')}: {'{{startYear}}'}, {'{{endYear}}'}, {'{{years}}'}, {'{{languageInstruction}}'}, {'{{profileSection}}'}, {'{{countryContext}}'}
             </div>
 
             {isEditing && (
               <div className="mt-3 flex gap-2">
                 <Button onClick={handleSaveCustom}>
-                  💾 保存为新模板
+                  💾 {t('promptEditor.saveAsNew')}
                 </Button>
                 <Button variant="secondary" onClick={() => {
                   onSelectTemplate(selectedId, editingTemplate);
                   setIsEditing(false);
                 }}>
-                  仅本次使用
+                  {t('promptEditor.useOnce')}
                 </Button>
               </div>
             )}
@@ -534,7 +556,7 @@ const PromptEditorModal: React.FC<{
         </div>
 
         <div className="p-4 border-t border-academic-700 flex justify-end">
-          <Button onClick={onClose}>确定</Button>
+          <Button onClick={onClose}>{t('buttons.confirm')}</Button>
         </div>
       </div>
     </div>
@@ -548,8 +570,22 @@ const isUniversityStudent = (grade?: string) => {
 };
 
 const GameContent: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [gameState, setGameState] = useState<GameState>(GameState.INTRO);
   const currentYear = new Date().getFullYear();
+  const currentLanguage = i18n.language as SupportedLanguage;
+  
+  // Load saved country preference from localStorage
+  const getSavedCountry = (): SupportedCountry => {
+    try {
+      const saved = localStorage.getItem(COUNTRY_STORAGE_KEY);
+      if (saved === 'CN' || saved === 'US') return saved;
+    } catch (e) {
+      console.warn('Failed to load country preference');
+    }
+    return DEFAULT_COUNTRY;
+  };
+  
   const [profile, setProfile] = useState<PlayerProfile>({
     name: '',
     gender: '男',
@@ -579,7 +615,8 @@ const GameContent: React.FC = () => {
     skills: '',
     customBio: '',
     simulationStartYear: currentYear,
-    simulationEndYear: currentYear + 10
+    simulationEndYear: currentYear + 10,
+    country: getSavedCountry()
   });
   const [currentScenario, setCurrentScenario] = useState<GameScenario | null>(null);
   const [finalResult, setFinalResult] = useState<FinalEvaluation | null>(null);
@@ -602,8 +639,8 @@ const GameContent: React.FC = () => {
 
   // Prompt Template State
   const [showPromptEditor, setShowPromptEditor] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('v1');
-  const [customPromptText, setCustomPromptText] = useState<string>('');
+  const [selectedTemplateId, setSelectedTemplateIdState] = useState<string>('classic');
+  const [customTemplateContent, setCustomTemplateContent] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -659,15 +696,11 @@ const GameContent: React.FC = () => {
       } catch (e) { console.error("Failed to load saved profile"); }
     }
 
-    // Load saved prompt template selection
-    const savedTemplateId = localStorage.getItem('life_sim_selected_template');
+    // Load saved template selection
+    const savedTemplateId = getSelectedTemplateId();
     if (savedTemplateId) {
-      setSelectedTemplateId(savedTemplateId);
-      const templates = getAllTemplates();
-      const template = templates.find(t => t.id === savedTemplateId);
-      if (template) {
-        setPromptTemplate(template.template);
-      }
+      setSelectedTemplateIdState(savedTemplateId);
+      setTemplate(savedTemplateId);
     }
   }, []);
 
@@ -718,7 +751,7 @@ const GameContent: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const scenario = await initializeGame(profile);
+      const scenario = await initializeGame(profile, currentLanguage, selectedTemplateId, customTemplateContent || undefined);
       setCurrentScenario(scenario);
       setGameState(GameState.PLAYING);
     } catch (err: any) {
@@ -826,7 +859,7 @@ const GameContent: React.FC = () => {
 
     // 调用服务恢复会话
     try {
-      await restoreSession(path);
+      await restoreSession(path, currentLanguage);
       console.log("AI Session restored to node:", nodeId);
     } catch (e) {
       console.error("Failed to restore AI session:", e);
@@ -857,35 +890,58 @@ const GameContent: React.FC = () => {
 
     const simulationYears = profile.simulationEndYear - profile.simulationStartYear;
     const date = new Date().toLocaleDateString();
-    let content = `# ${profile.name}的${simulationYears}年人生 (${profile.simulationStartYear}-${profile.simulationEndYear})\n\n`;
-    content += `> 生成时间: ${date}\n`;
-    content += `> 最终评价: ${finalResult.title} (得分: ${finalResult.score})\n\n`;
+    const isEnglish = i18n.language === 'en-US';
+    
+    // Localized labels
+    const labels = {
+      yearsLife: isEnglish ? `${profile.name}'s ${simulationYears}-Year Life` : `${profile.name}的${simulationYears}年人生`,
+      generatedTime: t('evaluation.generatedTime'),
+      finalEvaluation: t('evaluation.finalEvaluation'),
+      score: t('evaluation.score'),
+      personalProfile: t('evaluation.personalProfile'),
+      age: t('form.age'),
+      education: t('form.education'),
+      major: t('form.major'),
+      profession: t('form.profession'),
+      lifeHistory: t('evaluation.lifeHistory'),
+      situation: t('evaluation.situation'),
+      choice: t('evaluation.choice'),
+      result: t('evaluation.result'),
+      summary: t('evaluation.summary'),
+      lifeAdvice: t('evaluation.lifeAdvice'),
+      student: t('form.student'),
+      lifeSimulation: isEnglish ? 'Life_Simulation' : '人生模拟'
+    };
+    
+    let content = `# ${labels.yearsLife} (${profile.simulationStartYear}-${profile.simulationEndYear})\n\n`;
+    content += `> ${labels.generatedTime}: ${date}\n`;
+    content += `> ${labels.finalEvaluation}: ${finalResult.title} (${labels.score}: ${finalResult.score})\n\n`;
 
-    content += `## 个人档案\n`;
-    content += `- 年龄: ${profile.age}岁（${profile.simulationStartYear}年）\n`;
-    content += `- 学历: ${profile.education}${profile.universityTier ? ` (${profile.universityTier})` : ''}\n`;
-    content += `- ${profile.currentStatus === '学生' ? `专业: ${profile.major}` : `职业: ${profile.profession}`}\n`;
+    content += `## ${labels.personalProfile}\n`;
+    content += `- ${labels.age}: ${profile.age}${isEnglish ? '' : '岁'}（${profile.simulationStartYear}${isEnglish ? '' : '年'}）\n`;
+    content += `- ${labels.education}: ${profile.education}${profile.universityTier ? ` (${profile.universityTier})` : ''}\n`;
+    content += `- ${profile.currentStatus === labels.student || profile.currentStatus === '学生' ? `${labels.major}: ${profile.major}` : `${labels.profession}: ${profile.profession}`}\n`;
     content += `- MBTI: ${profile.mbti.energySource}${profile.mbti.perception}${profile.mbti.decision}${profile.mbti.lifestyle}\n\n`;
 
-    content += `## 人生履历\n\n`;
+    content += `## ${labels.lifeHistory}\n\n`;
     history.forEach(item => {
       content += `### ${item.phase}\n`;
-      content += `**情境**: ${item.description}\n\n`;
-      content += `**抉择**: ${item.choiceText}\n\n`;
-      if (item.feedback) content += `**结果**: ${item.feedback}\n\n`;
+      content += `**${labels.situation}**: ${item.description}\n\n`;
+      content += `**${labels.choice}**: ${item.choiceText}\n\n`;
+      if (item.feedback) content += `**${labels.result}**: ${item.feedback}\n\n`;
       content += `---\n\n`;
     });
 
-    content += `## 最终回顾\n\n`;
+    content += `## ${labels.summary}\n\n`;
     content += `${finalResult.summary}\n\n`;
-    content += `## 人生建议\n\n`;
+    content += `## ${labels.lifeAdvice}\n\n`;
     content += `${finalResult.advice}\n`;
 
     const blob = new Blob([content], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${profile.name}_人生模拟_${Date.now()}.md`;
+    a.download = `${profile.name}_${labels.lifeSimulation}_${Date.now()}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -911,43 +967,67 @@ const GameContent: React.FC = () => {
         </button>
 
         <div className="text-center mb-4">
-          <h1 className="text-2xl font-serif text-academic-50 mb-1">未择之路·人生推演</h1>
-          <h2 className="text-sm font-serif text-academic-300 italic">当信息变得廉价，什么才是你的核心资产？</h2>
+          <h1 className="text-2xl font-serif text-academic-50 mb-1">{t('app.title')}</h1>
+          <h2 className="text-sm font-serif text-academic-300 italic">{t('app.subtitle')}</h2>
         </div>
 
         <p className="text-academic-400 mb-4 font-light leading-snug text-xs bg-academic-900/50 p-2 rounded border-l-4 border-amber-600">
-          <strong>推演核心：</strong>
-          AI让信息生产成本归零，我们模拟在"信息无限、物质稀缺、信任重构"的新时代背景下，一个碳基生命的真实生存博弈。
-          <span className="text-academic-500 ml-1">（纯属虚构，博君一笑，切勿当真）</span>
+          <strong>{t('app.coreLabel')}</strong>
+          {t('app.description')}
+          <span className="text-academic-500 ml-1">{t('app.disclaimer')}</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Country Selector - First field */}
+          <div className="col-span-1 md:col-span-4 bg-academic-900/30 p-3 rounded border border-amber-700/50">
+            <label className="block text-amber-500 text-xs font-bold mb-2 uppercase tracking-wider">🌍 {t('form.country')}</label>
+            <CountrySelector
+              value={profile.country}
+              onChange={(country) => {
+                // Save country preference
+                try {
+                  localStorage.setItem(COUNTRY_STORAGE_KEY, country);
+                } catch (e) {
+                  console.warn('Failed to save country preference');
+                }
+                // Reset location when country changes
+                setProfile({ 
+                  ...profile, 
+                  country,
+                  hometown: { province: '', city: '' },
+                  currentLocation: { province: '', city: '' }
+                });
+              }}
+              className="w-full md:w-auto"
+            />
+          </div>
+
           <div className="col-span-1">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">姓名</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.name')}</label>
             <input
               ref={nameInputRef}
               type="text"
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
-              placeholder="你的名字"
+              placeholder={t('form.namePlaceholder')}
               value={profile.name}
               onChange={(e) => setProfile({ ...profile, name: e.target.value })}
             />
           </div>
 
           <div className="col-span-1">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">性别</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.gender')}</label>
             <select
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
               value={profile.gender}
               onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
             >
-              <option value="男">男</option>
-              <option value="女">女</option>
+              <option value="男">{t('form.male')}</option>
+              <option value="女">{t('form.female')}</option>
             </select>
           </div>
 
           <div className="col-span-1">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">年龄</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.age')}</label>
             <input
               type="number"
               min="18"
@@ -956,14 +1036,14 @@ const GameContent: React.FC = () => {
               value={profile.age}
               onChange={(e) => setProfile({ ...profile, age: parseInt(e.target.value) || 18 })}
             />
-            <p className="text-academic-500 text-xs mt-1">填写模拟起始年时的年龄</p>
+            <p className="text-academic-500 text-xs mt-1">{t('form.ageHint')}</p>
           </div>
 
           <div className="col-span-1 md:col-span-4 bg-academic-900/30 p-3 rounded border border-academic-700">
-            <label className="block text-amber-500 text-xs font-bold mb-2 uppercase tracking-wider">⏰ 模拟时间段</label>
+            <label className="block text-amber-500 text-xs font-bold mb-2 uppercase tracking-wider">⏰ {t('form.simulationPeriod')}</label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-academic-400 text-xs mb-1">起始年份</label>
+                <label className="block text-academic-400 text-xs mb-1">{t('form.startYear')}</label>
                 <input
                   type="number"
                   min={currentYear}
@@ -981,7 +1061,7 @@ const GameContent: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-academic-400 text-xs mb-1">结束年份</label>
+                <label className="block text-academic-400 text-xs mb-1">{t('form.endYear')}</label>
                 <input
                   type="number"
                   min={profile.simulationStartYear + 1}
@@ -993,65 +1073,62 @@ const GameContent: React.FC = () => {
               </div>
             </div>
             <p className="text-academic-500 text-xs mt-2">
-              将模拟 <span className="text-amber-500 font-bold">{profile.simulationEndYear - profile.simulationStartYear}</span> 年的人生轨迹
+              {t('form.simulationYearsHint', { years: profile.simulationEndYear - profile.simulationStartYear })}
             </p>
           </div>
 
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">当前状态</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.currentStatus')}</label>
             <select
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
               value={profile.currentStatus}
               onChange={(e) => setProfile({ ...profile, currentStatus: e.target.value })}
             >
-              <option value="学生">学生</option>
-              <option value="在职">在职</option>
-              <option value="创业">创业</option>
-              <option value="待业">待业</option>
-              <option value="自由职业">自由职业</option>
-              <option value="退休">退休</option>
+              {getCountryContext(profile.country, currentLanguage).currentStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
             </select>
           </div>
 
           {profile.currentStatus === '学生' && (
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">当前年级</label>
+              <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.grade')}</label>
               <select
                 className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
                 value={profile.grade}
                 onChange={(e) => setProfile({ ...profile, grade: e.target.value })}
               >
-                <option value="">请选择年级</option>
-                <optgroup label="小学">
-                  <option value="小学一年级">小学一年级</option>
-                  <option value="小学二年级">小学二年级</option>
-                  <option value="小学三年级">小学三年级</option>
-                  <option value="小学四年级">小学四年级</option>
-                  <option value="小学五年级">小学五年级</option>
-                  <option value="小学六年级">小学六年级</option>
+                <option value="">{t('form.selectGrade')}</option>
+                <optgroup label={t('grades.elementary')}>
+                  <option value="小学一年级">{t('grades.elementary1')}</option>
+                  <option value="小学二年级">{t('grades.elementary2')}</option>
+                  <option value="小学三年级">{t('grades.elementary3')}</option>
+                  <option value="小学四年级">{t('grades.elementary4')}</option>
+                  <option value="小学五年级">{t('grades.elementary5')}</option>
+                  <option value="小学六年级">{t('grades.elementary6')}</option>
                 </optgroup>
-                <optgroup label="初中">
-                  <option value="初一">初一</option>
-                  <option value="初二">初二</option>
-                  <option value="初三">初三</option>
+                <optgroup label={t('grades.middleSchool')}>
+                  <option value="初一">{t('grades.middle1')}</option>
+                  <option value="初二">{t('grades.middle2')}</option>
+                  <option value="初三">{t('grades.middle3')}</option>
                 </optgroup>
-                <optgroup label="高中/职高">
-                  <option value="高一">高一</option>
-                  <option value="高二">高二</option>
-                  <option value="高三">高三</option>
+                <optgroup label={t('grades.highSchool')}>
+                  <option value="高一">{t('grades.high1')}</option>
+                  <option value="高二">{t('grades.high2')}</option>
+                  <option value="高三">{t('grades.high3')}</option>
                 </optgroup>
-                <optgroup label="大学/大专">
-                  <option value="大一">大一</option>
-                  <option value="大二">大二</option>
-                  <option value="大三">大三</option>
-                  <option value="大四">大四</option>
-                  <option value="大五(医/建)">大五</option>
+                <optgroup label={t('grades.university')}>
+                  <option value="大一">{t('grades.uni1')}</option>
+                  <option value="大二">{t('grades.uni2')}</option>
+                  <option value="大三">{t('grades.uni3')}</option>
+                  <option value="大四">{t('grades.uni4')}</option>
+                  <option value="大五(医/建)">{t('grades.uni5')}</option>
                 </optgroup>
-                <optgroup label="研究生">
-                  <option value="研一">研一</option>
-                  <option value="研二">研二</option>
-                  <option value="研三">研三</option>
-                  <option value="博士在读">博士在读</option>
+                <optgroup label={t('grades.graduate')}>
+                  <option value="研一">{t('grades.grad1')}</option>
+                  <option value="研二">{t('grades.grad2')}</option>
+                  <option value="研三">{t('grades.grad3')}</option>
+                  <option value="博士在读">{t('grades.phd')}</option>
                 </optgroup>
               </select>
             </div>
@@ -1059,104 +1136,93 @@ const GameContent: React.FC = () => {
 
           {profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && (
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">高校层次</label>
+              <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.universityTier')}</label>
               <select
                 className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
                 value={profile.universityTier}
                 onChange={(e) => setProfile({ ...profile, universityTier: e.target.value })}
               >
-                <option value="">请选择高校层次</option>
-                <option value="Top 2 (清北)">Top 2 (清北)</option>
-                <option value="C9/华五">C9/华五</option>
-                <option value="985/211重点大学">985/211</option>
-                <option value="普通一本/二本">普通本科</option>
-                <option value="大专/职业院校">大专/职校</option>
-                <option value="海外名校 (QS Top 100)">海外名校</option>
-                <option value="普通海外高校">普通海外高校</option>
+                <option value="">{t('form.selectUniversityTier')}</option>
+                {getCountryContext(profile.country, currentLanguage).universityTiers.map((tier) => (
+                  <option key={tier} value={tier}>{tier}</option>
+                ))}
               </select>
             </div>
           )}
 
           <div className="col-span-1">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">学历</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.education')}</label>
             <select
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
               value={profile.education}
               onChange={(e) => setProfile({ ...profile, education: e.target.value })}
             >
-              <option value="无">无</option>
-              <option value="高中">高中</option>
-              <option value="大专">大专</option>
-              <option value="本科">本科</option>
-              <option value="硕士">硕士</option>
-              <option value="博士">博士</option>
+              {getCountryContext(profile.country, currentLanguage).educationLevels.map((level) => (
+                <option key={level} value={level}>{level}</option>
+              ))}
             </select>
           </div>
 
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">家庭背景</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.familyBackground')}</label>
             <select
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
               value={profile.familyBackground}
               onChange={(e) => setProfile({ ...profile, familyBackground: e.target.value })}
             >
-              <option value="富裕 (家产丰厚/有矿)">富裕</option>
-              <option value="中产 (衣食无忧/城市土著)">中产</option>
-              <option value="工薪 (普通家庭)">工薪</option>
-              <option value="贫困 (寒门学子)">贫困</option>
+              {getCountryContext(profile.country, currentLanguage).familyBackgrounds.map((bg) => (
+                <option key={bg} value={bg}>{bg}</option>
+              ))}
             </select>
           </div>
 
           <div className="col-span-1">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">父母职业</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.parentsOccupation')}</label>
             <select
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors appearance-none text-sm"
               value={profile.parentsOccupation}
               onChange={(e) => setProfile({ ...profile, parentsOccupation: e.target.value })}
             >
-              <option value="务农">务农</option>
-              <option value="小生意">小生意</option>
-              <option value="白领">白领</option>
-              <option value="基层公务员">公务员</option>
-              <option value="中高层管理">管理层</option>
-              <option value="老板/企业家">老板</option>
-              <option value="专业人士">专业人士</option>
-              <option value="其他">其他</option>
+              {getCountryContext(profile.country, currentLanguage).parentsOccupations.map((occ) => (
+                <option key={occ} value={occ}>{occ}</option>
+              ))}
             </select>
           </div>
 
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">籍贯</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.hometown')}</label>
             <LocationCascader
               value={profile.hometown}
               onChange={(val) => setProfile({ ...profile, hometown: val })}
+              country={profile.country}
             />
           </div>
 
           <div className="col-span-1 md:col-span-2">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">当前所在地</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.currentLocation')}</label>
             <LocationCascader
               value={profile.currentLocation}
               onChange={(val) => setProfile({ ...profile, currentLocation: val })}
+              country={profile.country}
             />
           </div>
 
           <div className="col-span-1 md:col-span-2">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">
-              {profile.currentStatus === '学生' ? '专业' : '职业'}
+              {profile.currentStatus === '学生' ? t('form.major') : t('form.profession')}
             </label>
             {profile.currentStatus === '学生' ? (
               <ProfessionAutocomplete
                 value={profile.major || ''}
                 onChange={(val) => setProfile({ ...profile, major: val })}
-                placeholder="例：计算机科学、临床医学、金融学"
+                placeholder={t('form.majorPlaceholder')}
                 mode="major"
               />
             ) : (
               <ProfessionAutocomplete
                 value={profile.profession || ''}
                 onChange={(val) => setProfile({ ...profile, profession: val })}
-                placeholder="例：软件工程师、医生、教师"
+                placeholder={t('form.professionPlaceholder')}
                 mode="profession"
               />
             )}
@@ -1164,19 +1230,13 @@ const GameContent: React.FC = () => {
 
           <div className="col-span-1 md:col-span-4">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">
-              MBTI性格
+              {t('mbti.title')}
               <span className="ml-2 text-amber-500 font-normal normal-case text-xs">
                 {profile.mbti.energySource}{profile.mbti.perception}{profile.mbti.decision}{profile.mbti.lifestyle}
                 {' - '}
                 {(() => {
                   const mbtiType = `${profile.mbti.energySource}${profile.mbti.perception}${profile.mbti.decision}${profile.mbti.lifestyle}`;
-                  const mbtiNames: Record<string, string> = {
-                    'INTJ': '建筑师', 'INTP': '逻辑学家', 'ENTJ': '指挥官', 'ENTP': '辩论家',
-                    'INFJ': '提倡者', 'INFP': '调停者', 'ENFJ': '主人公', 'ENFP': '竞选者',
-                    'ISTJ': '物流师', 'ISFJ': '守卫者', 'ESTJ': '总经理', 'ESFJ': '执政官',
-                    'ISTP': '鉴赏家', 'ISFP': '探险家', 'ESTP': '企业家', 'ESFP': '表演者'
-                  };
-                  return mbtiNames[mbtiType] || '';
+                  return t(`mbti.types.${mbtiType}`, '');
                 })()}
               </span>
             </label>
@@ -1185,8 +1245,8 @@ const GameContent: React.FC = () => {
               {/* 维度1: 能量来源 */}
               <div>
                 <div className="text-academic-400 text-xs mb-1 flex items-center gap-1">
-                  能量来源
-                  <Tooltip content="外向(E): 从社交中获得能量，喜欢团队合作；内向(I): 从独处中获得能量，需要个人空间">
+                  {t('mbti.energySource')}
+                  <Tooltip content={t('mbti.energySourceHint')}>
                     <span className="text-academic-500 cursor-help text-[10px]">ℹ️</span>
                   </Tooltip>
                 </div>
@@ -1199,7 +1259,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">🌟 外向(E)</div>
+                    <div className="font-semibold">🌟 {t('mbti.extrovert')}</div>
                   </button>
                   <button
                     type="button"
@@ -1209,7 +1269,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">🌙 内向(I)</div>
+                    <div className="font-semibold">🌙 {t('mbti.introvert')}</div>
                   </button>
                 </div>
               </div>
@@ -1217,8 +1277,8 @@ const GameContent: React.FC = () => {
               {/* 维度2: 认知方式 */}
               <div>
                 <div className="text-academic-400 text-xs mb-1 flex items-center gap-1">
-                  认知方式
-                  <Tooltip content="实感(S): 关注具体细节和实际经验；直觉(N): 关注大局和未来可能性">
+                  {t('mbti.perception')}
+                  <Tooltip content={t('mbti.perceptionHint')}>
                     <span className="text-academic-500 cursor-help text-[10px]">ℹ️</span>
                   </Tooltip>
                 </div>
@@ -1231,7 +1291,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">👁️ 实感(S)</div>
+                    <div className="font-semibold">👁️ {t('mbti.sensing')}</div>
                   </button>
                   <button
                     type="button"
@@ -1241,7 +1301,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">💡 直觉(N)</div>
+                    <div className="font-semibold">💡 {t('mbti.intuition')}</div>
                   </button>
                 </div>
               </div>
@@ -1249,8 +1309,8 @@ const GameContent: React.FC = () => {
               {/* 维度3: 决策方式 */}
               <div>
                 <div className="text-academic-400 text-xs mb-1 flex items-center gap-1">
-                  决策方式
-                  <Tooltip content="思考(T): 基于逻辑分析做决策，追求客观公正；情感(F): 基于价值观和人际关系做决策">
+                  {t('mbti.decision')}
+                  <Tooltip content={t('mbti.decisionHint')}>
                     <span className="text-academic-500 cursor-help text-[10px]">ℹ️</span>
                   </Tooltip>
                 </div>
@@ -1263,7 +1323,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">🧠 思考(T)</div>
+                    <div className="font-semibold">🧠 {t('mbti.thinking')}</div>
                   </button>
                   <button
                     type="button"
@@ -1273,7 +1333,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">❤️ 情感(F)</div>
+                    <div className="font-semibold">❤️ {t('mbti.feeling')}</div>
                   </button>
                 </div>
               </div>
@@ -1281,8 +1341,8 @@ const GameContent: React.FC = () => {
               {/* 维度4: 生活方式 */}
               <div>
                 <div className="text-academic-400 text-xs mb-1 flex items-center gap-1">
-                  生活方式
-                  <Tooltip content="判断(J): 喜欢计划和结构，追求确定性；感知(P): 灵活应变，保持开放性">
+                  {t('mbti.lifestyle')}
+                  <Tooltip content={t('mbti.lifestyleHint')}>
                     <span className="text-academic-500 cursor-help text-[10px]">ℹ️</span>
                   </Tooltip>
                 </div>
@@ -1295,7 +1355,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">📋 判断(J)</div>
+                    <div className="font-semibold">📋 {t('mbti.judging')}</div>
                   </button>
                   <button
                     type="button"
@@ -1305,7 +1365,7 @@ const GameContent: React.FC = () => {
                       : 'bg-academic-900 border-academic-600 text-academic-300 hover:border-amber-600 hover:text-academic-100'
                       }`}
                   >
-                    <div className="font-semibold">🎲 感知(P)</div>
+                    <div className="font-semibold">🎲 {t('mbti.perceiving')}</div>
                   </button>
                 </div>
               </div>
@@ -1313,29 +1373,25 @@ const GameContent: React.FC = () => {
           </div>
 
           <div className="col-span-1 md:col-span-4">
-            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">特长与技能</label>
+            <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.skills')}</label>
             <input
               type="text"
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
               value={profile.skills}
               onChange={(e) => setProfile({ ...profile, skills: e.target.value })}
-              placeholder="例：英语流利、擅长编程、马拉松爱好者、烹饪高手"
+              placeholder={t('form.skillsPlaceholder')}
             />
           </div>
 
           <div className="col-span-1 md:col-span-4">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">
-              自定义设定 / 备注 <span className="text-academic-500 font-normal normal-case">(选填)</span>
+              {t('form.customBio')} <span className="text-academic-500 font-normal normal-case">{t('form.customBioOptional')}</span>
             </label>
             <textarea
               className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm h-24 resize-none"
               value={profile.customBio || ''}
               onChange={(e) => setProfile({ ...profile, customBio: e.target.value })}
-              placeholder="在这里写下任何你想补充的设定：
-- 具体的人生目标（如：35岁前财务自由）
-- 特殊的性格怪癖
-- 想要经历的特定剧情
-- 或者只是简单的碎碎念..."
+              placeholder={t('form.customBioPlaceholder')}
             />
           </div>
 
@@ -1352,30 +1408,30 @@ const GameContent: React.FC = () => {
               onClick={() => setShowConfig(true)}
             >
               <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-red-500'}`}></span>
-              <span>{isConfigured ? `${aiConfig?.provider}` : '配置AI'}</span>
+              <span>{isConfigured ? `${aiConfig?.provider}` : t('buttons.configureAI')}</span>
             </div>
 
             {/* 提示词按钮 */}
             <div
               className="text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
               onClick={() => setShowPromptEditor(true)}
-              title="选择系统提示词模板"
+              title={t('promptEditor.systemPromptSettings')}
             >
               <span>📝</span>
-              <span>系统提示词设置: {getAllTemplates().find(t => t.id === selectedTemplateId)?.name || '默认'}</span>
+              <span>{t('promptEditor.systemPromptSettings')}: {getTemplateName(getTemplateById(selectedTemplateId) || { name: { 'zh-CN': '经典版', 'en-US': 'Classic' } } as PromptTemplate, currentLanguage)}</span>
             </div>
 
             {/* 保存资料按钮 */}
             <button
               onClick={() => {
                 localStorage.setItem('life_sim_saved_profile', JSON.stringify(profile));
-                alert('资料已保存！下次打开页面会自动填充。');
+                alert(t('profile.savedSuccess'));
               }}
               className="text-xs px-3 py-2.5 rounded border cursor-pointer flex items-center justify-center gap-2 transition-colors bg-academic-800/50 border-academic-600 text-academic-300 hover:bg-academic-700 hover:text-white"
-              title="保存当前填写的资料"
+              title={t('buttons.saveProfile')}
             >
               <span>💾</span>
-              <span>保存资料</span>
+              <span>{t('buttons.saveProfile')}</span>
             </button>
 
             {/* 开始模拟按钮 */}
@@ -1397,7 +1453,7 @@ const GameContent: React.FC = () => {
               isLoading={loading}
               className="w-full"
             >
-              🚀 开始模拟
+              🚀 {t('buttons.start')}
             </Button>
           </div>
 
@@ -1408,7 +1464,7 @@ const GameContent: React.FC = () => {
                 onClick={handleResetGame}
                 className="text-xs px-3 py-1.5 rounded border border-red-800/50 text-red-400 hover:bg-red-900/30 transition-colors"
               >
-                🗑️ 清除存档
+                🗑️ {t('buttons.clearSave')}
               </button>
             </div>
           )}
@@ -1424,17 +1480,32 @@ const GameContent: React.FC = () => {
     if (finalResult.score >= 80) scoreColor = "text-green-500";
     else if (finalResult.score >= 60) scoreColor = "text-amber-500";
 
+    const simulationYears = profile.simulationEndYear - profile.simulationStartYear;
+    const finalAge = profile.age + simulationYears;
+    const occupation = profile.currentStatus === '学生' || profile.currentStatus === 'Student' ? profile.major : profile.profession;
+    const location = `${profile.currentLocation.province} ${profile.currentLocation.city}`;
+    const universityTierDisplay = profile.universityTier ? ` (${profile.universityTier})` : '';
+
     return (
       <div className="max-w-5xl w-full bg-paper text-academic-900 p-8 rounded-sm shadow-2xl border-t-8 border-academic-900 fade-in relative overflow-hidden">
         {/* Watermark */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none text-9xl font-serif font-bold whitespace-nowrap rotate-[-15deg]">
-          LIFE 2035
+          LIFE {profile.simulationEndYear}
         </div>
 
         <div className="text-center mb-8 border-b-2 border-academic-200 pb-6">
-          <h2 className="text-3xl font-serif font-bold mb-2 text-academic-900">{profile.simulationEndYear}年·个人档案</h2>
+          <h2 className="text-3xl font-serif font-bold mb-2 text-academic-900">
+            {t('evaluation.yearProfile', { year: profile.simulationEndYear })}
+          </h2>
           <div className="text-academic-600 text-sm uppercase tracking-widest">
-            {profile.name} | {profile.age + (profile.simulationEndYear - profile.simulationStartYear)}岁 | {profile.education}{profile.universityTier ? ` (${profile.universityTier})` : ''} | {profile.currentStatus === '学生' ? profile.major : profile.profession} | 现居：{profile.currentLocation.province} {profile.currentLocation.city}
+            {t('evaluation.profileInfo', { 
+              name: profile.name, 
+              age: finalAge, 
+              education: profile.education, 
+              universityTier: universityTierDisplay, 
+              occupation: occupation, 
+              location: location 
+            })}
           </div>
         </div>
 
@@ -1443,7 +1514,7 @@ const GameContent: React.FC = () => {
             <div className={`text-7xl font-bold font-serif ${scoreColor}`}>
               {finalResult.score}
             </div>
-            <div className="text-xs uppercase tracking-widest text-academic-500 mt-2">人生满意度</div>
+            <div className="text-xs uppercase tracking-widest text-academic-500 mt-2">{t('evaluation.score')}</div>
           </div>
           <div className="flex-grow">
             <h3 className="text-2xl font-bold font-serif text-academic-800 mb-3">{finalResult.title}</h3>
@@ -1456,7 +1527,7 @@ const GameContent: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-academic-100 p-5 rounded border border-academic-200">
             <h4 className="font-bold text-academic-800 mb-3 flex items-center text-sm uppercase tracking-wider">
-              <span className="text-amber-600 mr-2">●</span> {profile.simulationEndYear - profile.simulationStartYear}年轨迹 (Timeline)
+              <span className="text-amber-600 mr-2">●</span> {t('evaluation.yearsTimeline', { years: simulationYears })}
             </h4>
             <p className="text-academic-700 text-sm whitespace-pre-line leading-relaxed">
               {finalResult.timeline}
@@ -1464,7 +1535,7 @@ const GameContent: React.FC = () => {
           </div>
           <div className="bg-academic-50 p-5 rounded border border-academic-200">
             <h4 className="font-bold text-academic-800 mb-3 flex items-center text-sm uppercase tracking-wider">
-              <span className="text-amber-600 mr-2">●</span> 给2025年的建议
+              <span className="text-amber-600 mr-2">●</span> {t('evaluation.adviceForYear', { year: profile.simulationStartYear })}
             </h4>
             <p className="text-academic-700 text-sm italic leading-relaxed">
               "{finalResult.advice}"
@@ -1477,16 +1548,16 @@ const GameContent: React.FC = () => {
             localStorage.removeItem('life_sim_game_state');
             window.location.reload();
           }}>
-            再次重启人生
+            {t('evaluation.restartLife')}
           </Button>
           <Button variant="secondary" onClick={handleExport}>
-            📥 导出人生履历
+            📥 {t('evaluation.exportHistory')}
           </Button>
         </div>
 
         <div className="mt-6 pt-4 border-t border-academic-200 text-center text-xs text-academic-500">
-          <p>未择之路：人生推演模拟器 © 2025 墨渊Transhuman</p>
-          <p className="mt-1">本项目采用 MIT 开源许可协议</p>
+          <p>{t('evaluation.projectTitle')} {t('evaluation.copyright')}</p>
+          <p className="mt-1">{t('evaluation.license')}</p>
         </div>
       </div>
     );
@@ -1557,24 +1628,25 @@ const GameContent: React.FC = () => {
                   className="flex items-center gap-2 px-4 py-2 text-sm bg-academic-900/50 border border-academic-700 text-academic-300 rounded-full hover:bg-academic-800 hover:text-white hover:border-amber-500 transition-all group"
                 >
                   <span>📜</span>
-                  <span className="hidden sm:inline">人生履历</span>
+                  <span className="hidden sm:inline">{t('nav.history')}</span>
                 </button>
                 <button
                   onClick={handleResetGame}
                   className="flex items-center gap-2 px-4 py-2 text-sm bg-academic-900/50 border border-academic-700 text-academic-300 rounded-full hover:bg-academic-800 hover:text-white hover:border-red-500 transition-all group"
-                  title="重置进度"
+                  title={t('nav.restart')}
                 >
                   <span>🔄</span>
-                  <span className="hidden sm:inline">重启人生</span>
+                  <span className="hidden sm:inline">{t('nav.restart')}</span>
                 </button>
               </>
             )}
+            <LanguageSwitcher className="rounded-full" />
             <button
               onClick={() => setShowConfig(true)}
               className="flex items-center gap-2 px-4 py-2 text-sm bg-academic-900/50 border border-academic-700 text-academic-300 rounded-full hover:bg-academic-800 hover:text-white hover:border-amber-500 transition-all"
             >
               <span>⚙️</span>
-              <span className="hidden sm:inline">设置</span>
+              <span className="hidden sm:inline">{t('nav.settings')}</span>
             </button>
           </div>
         </div>
@@ -1600,18 +1672,23 @@ const GameContent: React.FC = () => {
         isOpen={showResetConfirm}
         onClose={() => setShowResetConfirm(false)}
         onConfirm={confirmReset}
-        title="重启人生？"
-        message="确定要重置当前游戏进度吗？所有未保存的记录将丢失，你将回到角色创建界面。"
+        title={t('reset.title')}
+        message={t('reset.message')}
       />
 
       <PromptEditorModal
         isOpen={showPromptEditor}
         onClose={() => setShowPromptEditor(false)}
         selectedId={selectedTemplateId}
-        onSelectTemplate={(id, template) => {
+        onSelectTemplate={(id, customTemplate) => {
+          setSelectedTemplateIdState(id);
           setSelectedTemplateId(id);
-          setPromptTemplate(template);
-          localStorage.setItem('life_sim_selected_template', id);
+          setTemplate(id, customTemplate);
+          if (customTemplate) {
+            setCustomTemplateContent(customTemplate);
+          } else {
+            setCustomTemplateContent(null);
+          }
         }}
       />
 

@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type, Chat, Schema } from "@google/genai";
-import { GameScenario, FinalEvaluation, PlayerProfile, AIConfig, ModelProvider, HistoryItem, HistoryNode } from "../types";
-import { generatePromptFromTemplate, defaultTemplates } from "./promptTemplates";
+import { GameScenario, FinalEvaluation, PlayerProfile, AIConfig, ModelProvider, HistoryNode } from "../types";
+import { getSystemPrompt, getSelectedTemplateId } from "./systemPrompts";
+import { SupportedLanguage, DEFAULT_LANGUAGE } from "../src/i18n/types";
 
 // --- SHARED HELPERS ---
 
@@ -50,14 +51,17 @@ let activeConfig: AIConfig | null = null;
 let geminiChatSession: Chat | null = null;
 let openaiHistory: Array<{ role: string; content: string }> = [];
 let currentProfile: PlayerProfile | null = null;
-let activePromptTemplate: string = defaultTemplates[0].template;
+let currentLanguage: SupportedLanguage = DEFAULT_LANGUAGE;
+let currentTemplateId: string | null = null;
+let currentCustomTemplate: string | null = null;
 
 export const setAIConfig = (config: AIConfig) => {
   activeConfig = config;
 };
 
-export const setPromptTemplate = (template: string) => {
-  activePromptTemplate = template;
+export const setTemplate = (templateId: string, customTemplate?: string) => {
+  currentTemplateId = templateId;
+  currentCustomTemplate = customTemplate || null;
 };
 
 // --- SCHEMAS ---
@@ -149,11 +153,14 @@ const callOpenAICompatible = async (
 
 // --- GAME LOGIC EXPORTS ---
 
-export const initializeGame = async (profile: PlayerProfile): Promise<GameScenario> => {
+export const initializeGame = async (profile: PlayerProfile, language?: SupportedLanguage, templateId?: string, customTemplate?: string): Promise<GameScenario> => {
   if (!activeConfig) throw new Error("Please configure API settings first.");
 
-  // Save profile for later use
+  // Save profile and language for later use
   currentProfile = profile;
+  currentLanguage = language || DEFAULT_LANGUAGE;
+  if (templateId) currentTemplateId = templateId;
+  if (customTemplate) currentCustomTemplate = customTemplate;
 
   // Get API Key from config
   const apiKey = activeConfig?.apiKey || '';
@@ -162,7 +169,15 @@ export const initializeGame = async (profile: PlayerProfile): Promise<GameScenar
     throw new Error("请先在设置中配置 API Key");
   }
 
-  const systemPrompt = generatePromptFromTemplate(activePromptTemplate, profile, activeConfig.provider !== ModelProvider.GEMINI);
+  // Use template-based system prompt
+  const systemPrompt = getSystemPrompt({
+    profile,
+    language: currentLanguage,
+    country: profile.country,
+    templateId: currentTemplateId || getSelectedTemplateId(),
+    customTemplate: currentCustomTemplate || undefined,
+    isJsonModeForOpenAI: activeConfig.provider !== ModelProvider.GEMINI
+  });
 
   // Reset state
   geminiChatSession = null;
@@ -331,10 +346,23 @@ export const getFinalEvaluation = async (): Promise<FinalEvaluation> => {
   }
 };
 
-export const restoreSession = async (path: HistoryNode[]) => {
+export const restoreSession = async (path: HistoryNode[], language?: SupportedLanguage) => {
   if (!activeConfig || !currentProfile) return;
 
-  const systemPrompt = generatePromptFromTemplate(activePromptTemplate, currentProfile, activeConfig.provider !== ModelProvider.GEMINI);
+  // Update language if provided
+  if (language) {
+    currentLanguage = language;
+  }
+
+  // Use template-based system prompt
+  const systemPrompt = getSystemPrompt({
+    profile: currentProfile,
+    language: currentLanguage,
+    country: currentProfile.country,
+    templateId: currentTemplateId || getSelectedTemplateId(),
+    customTemplate: currentCustomTemplate || undefined,
+    isJsonModeForOpenAI: activeConfig.provider !== ModelProvider.GEMINI
+  });
 
   // Reconstruct conversation history
   // Turn 0: User "Start" -> Model "Root Node"

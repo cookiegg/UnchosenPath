@@ -1,0 +1,157 @@
+# Implementation Plan
+
+- [x] 1. Set up i18n infrastructure
+  - [x] 1.1 Install dependencies (i18next, react-i18next, i18next-browser-languagedetector, fast-check)
+    - Run npm install for required packages
+    - _Requirements: 1.1, 1.2_
+  - [x] 1.2 Create i18n configuration and types
+    - Create `src/i18n/index.ts` with i18next initialization
+    - Create `src/i18n/types.ts` with SupportedLanguage, SupportedCountry types
+    - Configure language detection and localStorage persistence
+    - _Requirements: 1.1, 1.4, 1.5_
+  - [x] 1.3 Write property test for language persistence
+    - **Property 3: Language Persistence Round Trip**
+    - **Validates: Requirements 1.4, 1.5**
+
+- [x] 2. Create locale files
+  - [x] 2.1 Create Chinese locale file (zh-CN.json)
+    - Create `src/i18n/locales/zh-CN.json` with all UI text
+    - Include app, nav, form, buttons, errors, game, evaluation, share sections
+    - _Requirements: 2.1_
+  - [x] 2.2 Create English locale file (en-US.json)
+    - Create `src/i18n/locales/en-US.json` with all UI text
+    - Ensure same key structure as zh-CN
+    - _Requirements: 2.2_
+  - [x] 2.3 Write property test for locale key consistency
+    - **Property 7: Locale Key Consistency**
+    - **Validates: Requirements 6.4**
+  - [x] 2.4 Write property test for translation completeness
+    - **Property 2: Language Switching Updates All Text**
+    - **Validates: Requirements 1.3, 2.1, 2.2**
+
+- [x] 3. Create country context modules
+  - [x] 3.1 Create country context types and interface
+    - Create `src/i18n/countries/types.ts` with CountryContext interface
+    - Define LocationData, CountryContextModule interfaces
+    - _Requirements: 6.3_
+  - [x] 3.2 Create China country context
+    - Create `src/i18n/countries/china.ts`
+    - Include Chinese provinces/cities, education levels, university tiers, family backgrounds
+    - Support both zh-CN and en-US display names
+    - _Requirements: 3.2, 4.1, 4.3, 4.5, 4.7_
+  - [x] 3.3 Create USA country context
+    - Create `src/i18n/countries/usa.ts`
+    - Include US states/cities, education levels, university tiers, family backgrounds
+    - Support both zh-CN and en-US display names
+    - _Requirements: 3.3, 4.2, 4.4, 4.6, 4.8_
+  - [x] 3.4 Create country context index and loader
+    - Create `src/i18n/countries/index.ts` to export all country modules
+    - Implement getCountryContext(country, language) function
+    - _Requirements: 3.2, 3.3_
+  - [x] 3.5 Write property test for country context completeness
+    - **Property 4: Country Context Data Completeness**
+    - **Validates: Requirements 3.2, 3.3, 4.1-4.8**
+  - [x] 3.6 Write property test for country context interface consistency
+    - **Property 8: Country Context Interface Consistency**
+    - **Validates: Requirements 6.3**
+
+- [x] 4. Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Create country-specific system prompts
+  - [x] 5.1 Refactor system prompt to support multiple countries
+    - Create `services/systemPrompts/types.ts` with SystemPromptConfig interface
+    - Create `services/systemPrompts/index.ts` as entry point
+    - _Requirements: 5.1, 5.2_
+  - [x] 5.2 Create China system prompt (Chinese society context)
+    - Create `services/systemPrompts/china.ts`
+    - Include Chinese social phenomena, education system, job market
+    - Support output in both Chinese and English
+    - _Requirements: 5.1, 5.5_
+  - [x] 5.3 Create USA system prompt (American society context)
+    - Create `services/systemPrompts/usa.ts`
+    - Include American social phenomena, education system, job market
+    - Support output in both Chinese and English
+    - _Requirements: 5.2, 5.6_
+  - [x] 5.4 Write property test for system prompt country keywords
+    - **Property 5: Country System Prompt Contains Country Keywords**
+    - **Validates: Requirements 5.1, 5.2**
+  - [x] 5.5 Write property test for system prompt language instruction
+    - **Property 6: System Prompt Language Instruction**
+    - **Validates: Requirements 5.5, 5.6**
+
+- [x] 6. Create UI components for language and country selection
+  - [x] 6.1 Create LanguageSwitcher component
+    - Create `components/LanguageSwitcher.tsx`
+    - Implement dropdown with language options (中文, English)
+    - Persist selection to localStorage
+    - _Requirements: 1.2, 1.3, 1.4_
+  - [x] 6.2 Create CountrySelector component
+    - Create `components/CountrySelector.tsx`
+    - Display country options with flags (🇨🇳 China, 🇺🇸 USA)
+    - Emit country change event
+    - _Requirements: 3.1_
+  - [x] 6.3 Write property test for language detection
+    - **Property 1: Language Detection Consistency**
+    - **Validates: Requirements 1.1**
+
+- [x] 7. Integrate i18n into existing components
+  - [x] 7.1 Update App.tsx with i18n provider and language switcher
+    - Wrap app with I18nextProvider
+    - Add LanguageSwitcher to header
+    - Add country field to PlayerProfile state
+    - _Requirements: 1.2, 1.3, 3.1_
+  - [x] 7.2 Update character creation form with i18n
+    - Replace hardcoded Chinese text with t() calls
+    - Add CountrySelector at the beginning of form
+    - Update LocationCascader to use country-specific data
+    - _Requirements: 2.3, 2.4, 3.1, 4.1, 4.2_
+  - [x] 7.3 Update form options based on selected country
+    - Update education level options based on country
+    - Update university tier options based on country
+    - Update family background options based on country
+    - _Requirements: 4.3-4.8_
+  - [x] 7.4 Update game playing UI with i18n
+    - Update ScenarioCard with t() calls
+    - Update option buttons and custom input
+    - _Requirements: 2.3, 2.4_
+  - [x] 7.5 Update modals with i18n
+    - Update ConfigModal, HistoryModal, ConfirmModal
+    - Update PromptEditorModal
+    - _Requirements: 2.3, 2.4, 2.5, 2.6_
+
+- [x] 8. Update types and services
+  - [x] 8.1 Update PlayerProfile type with country field
+    - Add country: SupportedCountry to PlayerProfile interface
+    - Update default profile initialization
+    - _Requirements: 3.5_
+  - [x] 8.2 Update geminiService to use country-specific prompts
+    - Modify initializeGame to accept country and language
+    - Select appropriate system prompt based on country
+    - Include language instruction in prompt
+    - _Requirements: 5.1, 5.2, 5.5, 5.6_
+
+- [x] 9. Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Update share and export features
+  - [x] 10.1 Update ShareCard with i18n
+    - Replace hardcoded text with t() calls
+    - Update project title based on language
+    - _Requirements: 7.1, 7.2_
+  - [x] 10.2 Update Markdown export with i18n
+    - Localize export template strings
+    - Use current language for section headers
+    - _Requirements: 8.2_
+  - [x] 10.3 Write property test for export localization
+    - **Property 9: Export Uses Current Locale**
+    - **Validates: Requirements 8.2**
+
+- [x] 11. Update final evaluation display
+  - [x] 11.1 Update game over screen with i18n
+    - Localize score labels, section titles
+    - Update evaluation display components
+    - _Requirements: 8.1_
+
+- [x] 12. Final Checkpoint - Make sure all tests are passing
+  - Ensure all tests pass, ask the user if questions arise.
