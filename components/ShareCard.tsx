@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { GameScenario } from '../types';
+import tagPng from '../assets/tag-square.png';
 
 const PROJECT_URL = 'https://github.com/cookiegg/UnchosenPath';
 
@@ -21,7 +22,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
         {/* Header */}
         <div className="bg-academic-950 px-5 py-4 flex items-center justify-between border-b border-academic-700">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🎭</span>
+            <img src={tagPng} alt="logo" className="h-12 w-auto" />
             <div>
               <div className="text-amber-500 font-bold text-sm">未择之路</div>
               <div className="text-academic-400 text-xs">人生推演</div>
@@ -93,14 +94,18 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               github.com/cookiegg/UnchosenPath
             </div>
           </div>
-          <div className="w-16 h-16 bg-white rounded p-1 flex items-center justify-center">
+          <div className="w-16 h-16 bg-white rounded p-1 flex items-center justify-center relative">
             <QRCodeSVG
               value={PROJECT_URL}
               size={56}
-              level="M"
+              level="H"
               bgColor="#ffffff"
               fgColor="#1a1a2e"
             />
+            {/* 中间 logo 叠加 */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img src={tagPng} alt="logo" className="w-4 h-4 bg-white p-0.5 rounded-sm" />
+            </div>
           </div>
         </div>
       </div>
