@@ -30,7 +30,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
             <img src={tagPng} alt="logo" className="h-12 w-auto" />
             <div>
               <div className="text-amber-500 font-bold text-sm">
-                {isEnglish ? 'UnchosenPath' : '未择之路'}
+                {t('app.title')}
               </div>
               <div className="text-academic-400 text-xs">
                 {isEnglish ? 'Life Simulation' : '人生推演'}
@@ -118,10 +118,19 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
             {/* Center text */}
             <div className="flex-1 text-center pt-2">
               <div className="text-academic-400 text-[10px] leading-tight">
-                {isEnglish ? 'UnchosenPath' : '未择之路'}
+                {t('app.title')}
               </div>
               <div className="text-academic-500 text-[9px] mt-0.5">
                 {isEnglish ? 'Life Simulation' : '人生推演模拟器'}
+              </div>
+              {/* Text Links */}
+              <div className="mt-2 space-y-0.5">
+                <div className="text-amber-500 text-[8px] break-all">
+                  🎮 {DEMO_URL}
+                </div>
+                <div className="text-academic-400 text-[8px] break-all">
+                  💻 {PROJECT_URL}
+                </div>
               </div>
             </div>
             

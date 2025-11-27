@@ -63,8 +63,8 @@ const LocationCascader: React.FC<LocationCascaderProps> = ({
         });
     };
 
-    const provinceLabel = country === 'US' ? t('form.selectState', 'Select State') : t('form.selectProvince', '选择省份');
-    const cityLabel = country === 'US' ? t('form.selectCity', 'Select City') : t('form.selectCity', '选择城市');
+    const provinceLabel = country === 'US' ? t('form.selectState') : t('form.selectProvince');
+    const cityLabel = t('form.selectCity');
 
     return (
         <div className="grid grid-cols-2 gap-2">

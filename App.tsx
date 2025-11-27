@@ -26,6 +26,12 @@ import { SupportedCountry, SupportedLanguage, DEFAULT_COUNTRY, COUNTRY_STORAGE_K
 import { getCountryContext } from './src/i18n/countries';
 import './src/i18n'; // Initialize i18n
 
+// Helper to check if current status is "Student" (works for both languages)
+const isStudentStatus = (status: string): boolean => {
+  const studentValues = ['学生', 'Student'];
+  return studentValues.includes(status);
+};
+
 // --- PRESETS FOR PROVIDERS ---
 const PROVIDER_PRESETS: Record<string, Partial<AIConfig>> = {
   [ModelProvider.GEMINI]: {
@@ -563,10 +569,13 @@ const PromptEditorModal: React.FC<{
   );
 };
 
-// Helper to check if grade is university level
+// Helper to check if grade is university level (works with new value format)
 const isUniversityStudent = (grade?: string) => {
   if (!grade) return false;
-  return grade.includes('大') || grade.includes('研') || grade.includes('博士');
+  // New format: uni1, uni2, grad1, phd, etc.
+  // Old format: 大一, 研一, 博士在读, etc.
+  const universityGrades = ['uni1', 'uni2', 'uni3', 'uni4', 'uni5', 'grad1', 'grad2', 'grad3', 'phd'];
+  return universityGrades.includes(grade) || grade.includes('大') || grade.includes('研') || grade.includes('博士');
 };
 
 const GameContent: React.FC = () => {
@@ -586,38 +595,50 @@ const GameContent: React.FC = () => {
     return DEFAULT_COUNTRY;
   };
   
-  const [profile, setProfile] = useState<PlayerProfile>({
-    name: '',
-    gender: '男',
-    age: 25,
-    currentStatus: '在职',
-    education: '本科',
-    grade: '', // 初始化年级
-    universityTier: '', // 初始化高校层次
-    familyBackground: '中产 (衣食无忧/城市土著)',
-    parentsOccupation: '白领',
-    hometown: {
-      province: '',
-      city: ''
-    },
-    currentLocation: {
-      province: '',
-      city: ''
-    },
-    mbti: {
-      energySource: 'E',
-      perception: 'S',
-      decision: 'T',
-      lifestyle: 'J'
-    },
-    profession: '',
-    major: '',
-    skills: '',
-    customBio: '',
-    simulationStartYear: currentYear,
-    simulationEndYear: currentYear + 10,
-    country: getSavedCountry()
-  });
+  // Get default profile values based on language
+  const getDefaultProfile = (lang: SupportedLanguage, country: SupportedCountry): PlayerProfile => {
+    const isEnglish = lang === 'en-US';
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
+    return {
+      name: '',
+      gender: isEnglish ? 'Male' : '男',
+      age: 25,
+      currentStatus: isEnglish ? 'Employed' : '在职',
+      education: isEnglish ? "Bachelor's" : '本科',
+      grade: '',
+      universityTier: '',
+      familyBackground: isEnglish ? 'Middle Class' : '中产 (衣食无忧/城市土著)',
+      parentsOccupation: isEnglish ? 'White Collar' : '白领',
+      hometown: {
+        province: '',
+        city: ''
+      },
+      currentLocation: {
+        province: '',
+        city: ''
+      },
+      mbti: {
+        energySource: 'E',
+        perception: 'S',
+        decision: 'T',
+        lifestyle: 'J'
+      },
+      profession: '',
+      major: '',
+      skills: '',
+      customBio: '',
+      simulationStartYear: currentYear,
+      simulationStartMonth: currentMonth,
+      simulationEndYear: currentYear + 10,
+      simulationEndMonth: currentMonth,
+      country: country
+    };
+  };
+
+  const [profile, setProfile] = useState<PlayerProfile>(() => 
+    getDefaultProfile(currentLanguage, getSavedCountry())
+  );
   const [currentScenario, setCurrentScenario] = useState<GameScenario | null>(null);
   const [finalResult, setFinalResult] = useState<FinalEvaluation | null>(null);
   const [loading, setLoading] = useState(false);
@@ -643,6 +664,12 @@ const GameContent: React.FC = () => {
   const [customTemplateContent, setCustomTemplateContent] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Update document title and lang attribute based on language
+  useEffect(() => {
+    document.title = t('app.title');
+    document.documentElement.lang = currentLanguage === 'zh-CN' ? 'zh-CN' : 'en';
+  }, [t, currentLanguage]);
 
   // Load Config, Profile and Game State on Mount
   useEffect(() => {
@@ -735,10 +762,10 @@ const GameContent: React.FC = () => {
 
   const handleStartGame = async () => {
     if (!profile.name || !profile.hometown.province || !profile.hometown.city || !profile.currentLocation.province || !profile.currentLocation.city || !profile.skills) return;
-    if (profile.currentStatus === '学生' && !profile.major) return;
-    if (profile.currentStatus !== '学生' && !profile.profession) return;
-    if (profile.currentStatus === '学生' && !profile.grade) return;
-    if (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) return;
+    if (isStudentStatus(profile.currentStatus) && !profile.major) return;
+    if (!isStudentStatus(profile.currentStatus) && !profile.profession) return;
+    if (isStudentStatus(profile.currentStatus) && !profile.grade) return;
+    if (isStudentStatus(profile.currentStatus) && isUniversityStudent(profile.grade) && !profile.universityTier) return;
 
     // Check config: valid if Gemini (env or key) OR (other provider AND has key)
     // For Gemini, we allow empty key if env var is expected, but we can't easily check env var existence in browser client-side safely without exposing it, 
@@ -920,7 +947,7 @@ const GameContent: React.FC = () => {
     content += `## ${labels.personalProfile}\n`;
     content += `- ${labels.age}: ${profile.age}${isEnglish ? '' : '岁'}（${profile.simulationStartYear}${isEnglish ? '' : '年'}）\n`;
     content += `- ${labels.education}: ${profile.education}${profile.universityTier ? ` (${profile.universityTier})` : ''}\n`;
-    content += `- ${profile.currentStatus === labels.student || profile.currentStatus === '学生' ? `${labels.major}: ${profile.major}` : `${labels.profession}: ${profile.profession}`}\n`;
+    content += `- ${isStudentStatus(profile.currentStatus) ? `${labels.major}: ${profile.major}` : `${labels.profession}: ${profile.profession}`}\n`;
     content += `- MBTI: ${profile.mbti.energySource}${profile.mbti.perception}${profile.mbti.decision}${profile.mbti.lifestyle}\n\n`;
 
     content += `## ${labels.lifeHistory}\n\n`;
@@ -958,7 +985,7 @@ const GameContent: React.FC = () => {
         <button
           onClick={() => setShowConfig(true)}
           className="absolute top-4 right-4 text-academic-400 hover:text-amber-500 transition-colors"
-          title="设置模型 API"
+          title={t('buttons.configureAI')}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
@@ -1021,8 +1048,8 @@ const GameContent: React.FC = () => {
               value={profile.gender}
               onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
             >
-              <option value="男">{t('form.male')}</option>
-              <option value="女">{t('form.female')}</option>
+              <option value={currentLanguage === 'en-US' ? 'Male' : '男'}>{t('form.male')}</option>
+              <option value={currentLanguage === 'en-US' ? 'Female' : '女'}>{t('form.female')}</option>
             </select>
           </div>
 
@@ -1041,7 +1068,7 @@ const GameContent: React.FC = () => {
 
           <div className="col-span-1 md:col-span-4 bg-academic-900/30 p-3 rounded border border-academic-700">
             <label className="block text-amber-500 text-xs font-bold mb-2 uppercase tracking-wider">⏰ {t('form.simulationPeriod')}</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               <div>
                 <label className="block text-academic-400 text-xs mb-1">{t('form.startYear')}</label>
                 <input
@@ -1052,28 +1079,94 @@ const GameContent: React.FC = () => {
                   value={profile.simulationStartYear}
                   onChange={(e) => {
                     const startYear = parseInt(e.target.value) || currentYear;
+                    // Validate start date is not before current date
+                    const now = new Date();
+                    const currentMonth = now.getMonth() + 1;
+                    let validStartYear = startYear;
+                    let validStartMonth = profile.simulationStartMonth;
+                    
+                    if (startYear < currentYear || (startYear === currentYear && profile.simulationStartMonth < currentMonth)) {
+                      validStartYear = currentYear;
+                      validStartMonth = currentMonth;
+                    }
+                    
+                    const newEndYear = Math.max(validStartYear + 1, profile.simulationEndYear);
+                    const cappedEndYear = Math.min(newEndYear, validStartYear + 100);
                     setProfile({
                       ...profile,
-                      simulationStartYear: startYear,
-                      simulationEndYear: Math.max(startYear + 1, profile.simulationEndYear)
+                      simulationStartYear: validStartYear,
+                      simulationStartMonth: validStartMonth,
+                      simulationEndYear: cappedEndYear
                     });
                   }}
                 />
+              </div>
+              <div>
+                <label className="block text-academic-400 text-xs mb-1">{t('form.startMonth')}</label>
+                <select
+                  className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
+                  value={profile.simulationStartMonth}
+                  onChange={(e) => {
+                    const startMonth = parseInt(e.target.value);
+                    // Validate start date is not before current date
+                    const now = new Date();
+                    const currentMonth = now.getMonth() + 1;
+                    
+                    if (profile.simulationStartYear === currentYear && startMonth < currentMonth) {
+                      return; // Don't allow past months in current year
+                    }
+                    
+                    setProfile({ ...profile, simulationStartMonth: startMonth });
+                  }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
+                    <option key={month} value={month} disabled={profile.simulationStartYear === currentYear && month < new Date().getMonth() + 1}>
+                      {t(`form.${['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][month - 1]}`)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-academic-400 text-xs mb-1">{t('form.endYear')}</label>
                 <input
                   type="number"
                   min={profile.simulationStartYear + 1}
-                  max={2100}
+                  max={Math.min(2100, profile.simulationStartYear + 100)}
                   className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
                   value={profile.simulationEndYear}
-                  onChange={(e) => setProfile({ ...profile, simulationEndYear: parseInt(e.target.value) || profile.simulationStartYear + 10 })}
+                  onChange={(e) => {
+                    const endYear = parseInt(e.target.value) || profile.simulationStartYear + 10;
+                    const validEndYear = Math.max(endYear, profile.simulationStartYear + 1);
+                    const cappedEndYear = Math.min(validEndYear, profile.simulationStartYear + 100);
+                    setProfile({ 
+                      ...profile, 
+                      simulationEndYear: cappedEndYear
+                    });
+                  }}
                 />
+              </div>
+              <div>
+                <label className="block text-academic-400 text-xs mb-1">{t('form.endMonth')}</label>
+                <select
+                  className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
+                  value={profile.simulationEndMonth}
+                  onChange={(e) => {
+                    setProfile({ ...profile, simulationEndMonth: parseInt(e.target.value) });
+                  }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
+                    <option key={month} value={month}>
+                      {t(`form.${['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][month - 1]}`)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <p className="text-academic-500 text-xs mt-2">
-              {t('form.simulationYearsHint', { years: profile.simulationEndYear - profile.simulationStartYear })}
+              {t('form.simulationYearsHint', { 
+                years: profile.simulationEndYear - profile.simulationStartYear + 
+                  (profile.simulationEndMonth >= profile.simulationStartMonth ? 0 : 1)
+              })}
             </p>
           </div>
 
@@ -1090,7 +1183,7 @@ const GameContent: React.FC = () => {
             </select>
           </div>
 
-          {profile.currentStatus === '学生' && (
+          {isStudentStatus(profile.currentStatus) && (
             <div className="col-span-1 md:col-span-2">
               <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.grade')}</label>
               <select
@@ -1100,41 +1193,41 @@ const GameContent: React.FC = () => {
               >
                 <option value="">{t('form.selectGrade')}</option>
                 <optgroup label={t('grades.elementary')}>
-                  <option value="小学一年级">{t('grades.elementary1')}</option>
-                  <option value="小学二年级">{t('grades.elementary2')}</option>
-                  <option value="小学三年级">{t('grades.elementary3')}</option>
-                  <option value="小学四年级">{t('grades.elementary4')}</option>
-                  <option value="小学五年级">{t('grades.elementary5')}</option>
-                  <option value="小学六年级">{t('grades.elementary6')}</option>
+                  <option value="elementary1">{t('grades.elementary1')}</option>
+                  <option value="elementary2">{t('grades.elementary2')}</option>
+                  <option value="elementary3">{t('grades.elementary3')}</option>
+                  <option value="elementary4">{t('grades.elementary4')}</option>
+                  <option value="elementary5">{t('grades.elementary5')}</option>
+                  <option value="elementary6">{t('grades.elementary6')}</option>
                 </optgroup>
                 <optgroup label={t('grades.middleSchool')}>
-                  <option value="初一">{t('grades.middle1')}</option>
-                  <option value="初二">{t('grades.middle2')}</option>
-                  <option value="初三">{t('grades.middle3')}</option>
+                  <option value="middle1">{t('grades.middle1')}</option>
+                  <option value="middle2">{t('grades.middle2')}</option>
+                  <option value="middle3">{t('grades.middle3')}</option>
                 </optgroup>
                 <optgroup label={t('grades.highSchool')}>
-                  <option value="高一">{t('grades.high1')}</option>
-                  <option value="高二">{t('grades.high2')}</option>
-                  <option value="高三">{t('grades.high3')}</option>
+                  <option value="high1">{t('grades.high1')}</option>
+                  <option value="high2">{t('grades.high2')}</option>
+                  <option value="high3">{t('grades.high3')}</option>
                 </optgroup>
                 <optgroup label={t('grades.university')}>
-                  <option value="大一">{t('grades.uni1')}</option>
-                  <option value="大二">{t('grades.uni2')}</option>
-                  <option value="大三">{t('grades.uni3')}</option>
-                  <option value="大四">{t('grades.uni4')}</option>
-                  <option value="大五(医/建)">{t('grades.uni5')}</option>
+                  <option value="uni1">{t('grades.uni1')}</option>
+                  <option value="uni2">{t('grades.uni2')}</option>
+                  <option value="uni3">{t('grades.uni3')}</option>
+                  <option value="uni4">{t('grades.uni4')}</option>
+                  <option value="uni5">{t('grades.uni5')}</option>
                 </optgroup>
                 <optgroup label={t('grades.graduate')}>
-                  <option value="研一">{t('grades.grad1')}</option>
-                  <option value="研二">{t('grades.grad2')}</option>
-                  <option value="研三">{t('grades.grad3')}</option>
-                  <option value="博士在读">{t('grades.phd')}</option>
+                  <option value="grad1">{t('grades.grad1')}</option>
+                  <option value="grad2">{t('grades.grad2')}</option>
+                  <option value="grad3">{t('grades.grad3')}</option>
+                  <option value="phd">{t('grades.phd')}</option>
                 </optgroup>
               </select>
             </div>
           )}
 
-          {profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && (
+          {isStudentStatus(profile.currentStatus) && isUniversityStudent(profile.grade) && (
             <div className="col-span-1 md:col-span-2">
               <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">{t('form.universityTier')}</label>
               <select
@@ -1209,9 +1302,9 @@ const GameContent: React.FC = () => {
 
           <div className="col-span-1 md:col-span-2">
             <label className="block text-academic-300 text-xs font-bold mb-1.5 uppercase tracking-wider">
-              {profile.currentStatus === '学生' ? t('form.major') : t('form.profession')}
+              {isStudentStatus(profile.currentStatus) ? t('form.major') : t('form.profession')}
             </label>
-            {profile.currentStatus === '学生' ? (
+            {isStudentStatus(profile.currentStatus) ? (
               <ProfessionAutocomplete
                 value={profile.major || ''}
                 onChange={(val) => setProfile({ ...profile, major: val })}
@@ -1444,10 +1537,10 @@ const GameContent: React.FC = () => {
                 !profile.currentLocation.province ||
                 !profile.currentLocation.city ||
                 !profile.skills ||
-                (profile.currentStatus === '学生' && !profile.major) ||
-                (profile.currentStatus !== '学生' && !profile.profession) ||
-                (profile.currentStatus === '学生' && !profile.grade) ||
-                (profile.currentStatus === '学生' && isUniversityStudent(profile.grade) && !profile.universityTier) ||
+                (isStudentStatus(profile.currentStatus) && !profile.major) ||
+                (!isStudentStatus(profile.currentStatus) && !profile.profession) ||
+                (isStudentStatus(profile.currentStatus) && !profile.grade) ||
+                (isStudentStatus(profile.currentStatus) && isUniversityStudent(profile.grade) && !profile.universityTier) ||
                 loading
               }
               isLoading={loading}
@@ -1572,7 +1665,7 @@ const GameContent: React.FC = () => {
             <img src={logoImage} alt="Logo" className="h-auto w-12" />
             <div className="hidden md:flex md:flex-col">
               <h1 className="font-serif text-academic-100 text-lg tracking-wide">
-                未择之路：人生推演
+                未择之路UnchosenPath
                 {gameState !== GameState.INTRO && (
                   <span className="text-academic-500 text-sm ml-1">
                     {profile.simulationStartYear}-{profile.simulationEndYear}
@@ -1609,7 +1702,7 @@ const GameContent: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-academic-500 hover:text-amber-500 transition-colors"
-                    title="抖音"
+                    title="TikTok/Douyin"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />

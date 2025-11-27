@@ -44,6 +44,7 @@
     "major": "Major",
     "professionPlaceholder": "e.g., Software Engineer, Doctor, Teacher",
     "majorPlaceholder": "e.g., Computer Science, Medicine, Finance",
+    "noMatchHint": "No match found. You can enter custom content.",
     "skills": "Skills & Talents",
     "skillsPlaceholder": "e.g., Fluent in English, Programming, Marathon runner, Cooking",
     "customBio": "Custom Settings / Notes",
@@ -51,11 +52,25 @@
     "customBioPlaceholder": "Write any additional settings here:\n- Specific life goals (e.g., Financial freedom by 35)\n- Unique personality quirks\n- Specific storylines you want to experience\n- Or just random thoughts...",
     "simulationPeriod": "Simulation Period",
     "startYear": "Start Year",
+    "startMonth": "Start Month",
     "endYear": "End Year",
+    "endMonth": "End Month",
     "simulationYearsHint": "Will simulate {{years}} years of life trajectory",
     "selectProvince": "Select Province",
     "selectState": "Select State",
-    "selectCity": "Select City"
+    "selectCity": "Select City",
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
   },
   "grades": {
     "elementary": "Elementary School",
@@ -170,7 +185,8 @@
     "submitCustom": "Submit Custom Response",
     "configureAI": "Configure AI",
     "clearSave": "Clear Save",
-    "reload": "Reload Page"
+    "reload": "Reload Page",
+    "processing": "Processing..."
   },
   "config": {
     "title": "AI Model Settings",
@@ -235,6 +251,7 @@
     "loadingTitle": "Time flows on...",
     "loadingDesc": "Calculating timeline changes from {{startYear}} to {{endYear}}",
     "makeChoice": "Make your choice",
+    "feedback": "Feedback",
     "or": "or",
     "submitHint": "Tip: Ctrl/Cmd + Enter to submit quickly",
     "noRecords": "No records yet",

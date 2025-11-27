@@ -38,7 +38,9 @@ export interface PlayerProfile {
   skills: string; // 特长和技能
   customBio?: string; // 自定义备注/故事设定
   simulationStartYear: number; // 模拟起始年份
+  simulationStartMonth: number; // 模拟起始月份 (1-12)
   simulationEndYear: number; // 模拟结束年份
+  simulationEndMonth: number; // 模拟结束月份 (1-12)
   country: SupportedCountry; // 推演背景国家
 }
 

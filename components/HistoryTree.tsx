@@ -11,6 +11,7 @@ import ReactFlow, {
   Handle,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { useTranslation } from 'react-i18next';
 import { GameTree, HistoryNode } from '../types';
 
 interface HistoryTreeProps {
@@ -26,6 +27,7 @@ const CustomNode = ({ data }: { data: any }) => {
   const isRoot = data.isRoot;
   const isCollapsed = data.isCollapsed;
   const onToggleCollapse = data.onToggleCollapse;
+  const t = data.t;
 
   return (
     <div
@@ -56,7 +58,7 @@ const CustomNode = ({ data }: { data: any }) => {
           <span className="truncate max-w-[180px]">{data.phase}</span>
           {data.branchCount > 1 && (
             <span className="bg-academic-900/50 px-1.5 py-0.5 rounded text-[10px]">
-              {data.branchCount} 分支
+              {data.branchCount} {t('game.branches')}
             </span>
           )}
         </div>
@@ -76,12 +78,12 @@ const CustomNode = ({ data }: { data: any }) => {
         {/* Footer/Status */}
         {isRoot && (
           <div className="px-3 py-1 bg-blue-900/30 text-blue-300 text-[10px] text-center font-mono">
-            START
+            {t('game.start')}
           </div>
         )}
         {isCurrent && (
           <div className="px-3 py-1 bg-amber-900/30 text-amber-300 text-[10px] text-center font-mono animate-pulse">
-            CURRENT
+            {t('game.current')}
           </div>
         )}
       </div>
@@ -121,6 +123,7 @@ const HistoryTree: React.FC<HistoryTreeProps> = ({
   onNodeClick,
   currentNodeId,
 }) => {
+  const { t } = useTranslation();
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
 
   const handleToggleCollapse = useCallback((nodeId: string) => {
@@ -245,6 +248,7 @@ const HistoryTree: React.FC<HistoryTreeProps> = ({
           isRoot: node.id === gameTree.rootId,
           isCollapsed: collapsedNodes.has(node.id),
           onToggleCollapse: handleToggleCollapse,
+          t: t,
         },
       });
 
@@ -295,7 +299,7 @@ const HistoryTree: React.FC<HistoryTreeProps> = ({
     return (
       <div className="h-full flex items-center justify-center text-academic-500 flex-col gap-4">
         <div className="text-4xl opacity-20">🌳</div>
-        <div>暂无历史记录</div>
+        <div>{t('game.noRecords')}</div>
       </div>
     );
   }

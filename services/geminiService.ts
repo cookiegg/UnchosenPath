@@ -160,7 +160,7 @@ export const initializeGame = async (profile: PlayerProfile, language?: Supporte
   const apiKey = activeConfig?.apiKey || '';
 
   if (!apiKey) {
-    throw new Error("请先在设置中配置 API Key");
+    throw new Error("Please configure API Key in settings first / 请先在设置中配置 API Key");
   }
 
   // Use template-based system prompt
@@ -271,7 +271,20 @@ export const getFinalEvaluation = async (): Promise<FinalEvaluation> => {
 
   const simulationYears = currentProfile.simulationEndYear - currentProfile.simulationStartYear;
 
-  const prompt = `
+  // Generate prompt based on current language
+  const isEnglish = currentLanguage === 'en-US';
+  const prompt = isEnglish ? `
+    【Simulation Ended - Year ${currentProfile.simulationEndYear}】
+    Please review all decisions made during these ${simulationYears} years (${currentProfile.simulationStartYear}-${currentProfile.simulationEndYear}).
+    Generate a detailed "${simulationYears}-Year Life Review Report".
+    The report should include:
+    1. Final title/epithet.
+    2. Life satisfaction score (0-100).
+    3. ${simulationYears}-year timeline of major events (emphasizing personal ups and downs against the backdrop of the era).
+    4. Advice for young people (based on the logic validated in this simulation).
+    
+    ${activeConfig.provider !== ModelProvider.GEMINI ? `Output Format: JSON matching ${JSON.stringify(evaluationSchema)}` : ''}
+  ` : `
     【模拟结束 - ${currentProfile.simulationEndYear}年】
     请回顾这${simulationYears}年（${currentProfile.simulationStartYear}-${currentProfile.simulationEndYear}）的所有决策。
     请生成一份详细的《${simulationYears}年人生回顾报告》。

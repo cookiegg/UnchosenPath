@@ -23,7 +23,7 @@ const LANGUAGE_DISPLAY_NAMES: Record<SupportedLanguage, string> = {
  * Renders a dropdown for language selection with persistence to localStorage
  */
 const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ className = '' }) => {
-  const { i18n } = useTranslation();
+  useTranslation(); // Hook to trigger re-render on language change
   const currentLanguage = getCurrentLanguage();
 
   const handleLanguageChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {

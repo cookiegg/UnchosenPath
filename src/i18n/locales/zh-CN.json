@@ -44,6 +44,7 @@
     "major": "专业",
     "professionPlaceholder": "例：软件工程师、医生、教师",
     "majorPlaceholder": "例：计算机科学、临床医学、金融学",
+    "noMatchHint": "未找到匹配项，可直接输入自定义内容",
     "skills": "特长与技能",
     "skillsPlaceholder": "例：英语流利、擅长编程、马拉松爱好者、烹饪高手",
     "customBio": "自定义设定 / 备注",
@@ -51,11 +52,25 @@
     "customBioPlaceholder": "在这里写下任何你想补充的设定：\n- 具体的人生目标（如：35岁前财务自由）\n- 特殊的性格怪癖\n- 想要经历的特定剧情\n- 或者只是简单的碎碎念...",
     "simulationPeriod": "模拟时间段",
     "startYear": "起始年份",
+    "startMonth": "起始月份",
     "endYear": "结束年份",
+    "endMonth": "结束月份",
     "simulationYearsHint": "将模拟 {{years}} 年的人生轨迹",
     "selectProvince": "选择省份",
     "selectState": "选择州",
-    "selectCity": "选择城市"
+    "selectCity": "选择城市",
+    "january": "1月",
+    "february": "2月",
+    "march": "3月",
+    "april": "4月",
+    "may": "5月",
+    "june": "6月",
+    "july": "7月",
+    "august": "8月",
+    "september": "9月",
+    "october": "10月",
+    "november": "11月",
+    "december": "12月"
   },
   "grades": {
     "elementary": "小学",
@@ -170,7 +185,8 @@
     "submitCustom": "提交自定义回应",
     "configureAI": "配置AI",
     "clearSave": "清除存档",
-    "reload": "重新加载"
+    "reload": "重新加载",
+    "processing": "处理中..."
   },
   "config": {
     "title": "模型配置 (AI Settings)",
@@ -235,12 +251,13 @@
     "loadingTitle": "岁月流转中...",
     "loadingDesc": "正在计算 {{startYear}}-{{endYear}} 的世界线变动",
     "makeChoice": "请做出你的选择",
+    "feedback": "反馈",
     "or": "或者",
     "submitHint": "提示: Ctrl/Cmd + Enter 快速提交",
     "noRecords": "暂无记录",
     "current": "当前",
     "branches": "分支",
-    "start": "START"
+    "start": "起点"
   },
   "history": {
     "title": "人生履历",
