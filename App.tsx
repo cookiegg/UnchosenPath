@@ -757,7 +757,7 @@ const GameContent: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || JSON.stringify(err);
-      setError(`模拟器启动失败: ${errMsg}`);
+      setError(`${t('errors.simulatorStartFailed')}: ${errMsg}`);
     } finally {
       setLoading(false);
     }
@@ -822,7 +822,7 @@ const GameContent: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || JSON.stringify(err);
-      setError(`错误: ${errMsg}。请检查网络或点击重试。`);
+      setError(`${t('errors.errorPrefix')}: ${errMsg}。${t('errors.retryHint')}`);
     } finally {
       setLoading(false);
     }
@@ -1720,8 +1720,8 @@ const GameContent: React.FC = () => {
               <div className="absolute top-0 left-0 w-full h-full border-4 border-academic-700 rounded-full"></div>
               <div className="absolute top-0 left-0 w-full h-full border-4 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
             </div>
-            <h2 className="text-2xl font-serif text-academic-200">岁月流转中...</h2>
-            <p className="text-academic-500 mt-2 text-sm">正在计算 2025-2035 的世界线变动</p>
+            <h2 className="text-2xl font-serif text-academic-200">{t('game.loadingTitle')}</h2>
+            <p className="text-academic-500 mt-2 text-sm">{t('game.loadingDesc', { startYear: profile.simulationStartYear, endYear: profile.simulationEndYear })}</p>
           </div>
         )}
 

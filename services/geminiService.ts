@@ -88,12 +88,6 @@ const scenarioSchemaStructure = {
   required: ["phase", "description", "options", "isGameOver"],
 };
 
-// Gemini Schema Object (Typed)
-const scenarioSchema: Schema = {
-  type: Type.OBJECT,
-  ...scenarioSchemaStructure
-} as any;
-
 const evaluationSchema: Schema = {
   type: Type.OBJECT,
   properties: {
