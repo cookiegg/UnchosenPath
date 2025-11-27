@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "The Road Not Taken",
+    "title": "UnchosenPath",
     "subtitle": "Life Simulation in the AI Era",
     "description": "AI has reduced the cost of information production to zero. We simulate the real survival game of a carbon-based life form in a new era of 'infinite information, scarce resources, and reconstructed trust'.",
     "disclaimer": "(Purely fictional, for entertainment only)",
@@ -276,7 +276,8 @@
     "scanQR": "Scan to try",
     "previewTitle": "Share Image Preview",
     "longPressHint": "Long press to share to social media",
-    "viewProject": "Scan to view project",
+    "tryDemo": "Try Demo",
+    "viewProject": "GitHub",
     "myChoice": "My Choice",
     "currentSituation": "Current Situation",
     "facingChoices": "Facing Choices",

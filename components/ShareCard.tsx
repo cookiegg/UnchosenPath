@@ -1,9 +1,10 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { GameScenario } from '../types';
 import tagPng from '../assets/tag-square.png';
 
+const DEMO_URL = 'https://cookiegg.github.io/UnchosenPath';
 const PROJECT_URL = 'https://github.com/cookiegg/UnchosenPath';
 
 interface ShareCardProps {
@@ -29,7 +30,7 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
             <img src={tagPng} alt="logo" className="h-12 w-auto" />
             <div>
               <div className="text-amber-500 font-bold text-sm">
-                {isEnglish ? 'The Road Not Taken' : '未择之路'}
+                {isEnglish ? 'UnchosenPath' : '未择之路'}
               </div>
               <div className="text-academic-400 text-xs">
                 {isEnglish ? 'Life Simulation' : '人生推演'}
@@ -94,25 +95,51 @@ const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-4 bg-academic-950 flex items-center justify-between">
-          <div>
-            <div className="text-academic-400 text-xs mb-1">{t('share.viewProject')}</div>
-            <div className="text-amber-500 text-[10px] font-mono break-all max-w-[200px]">
-              github.com/cookiegg/UnchosenPath
+        {/* Footer with two QR codes */}
+        <div className="px-5 py-4 bg-academic-950">
+          <div className="flex items-start justify-between gap-4">
+            {/* Demo QR Code */}
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 bg-white rounded p-1 flex items-center justify-center relative">
+                <QRCodeSVG
+                  value={DEMO_URL}
+                  size={48}
+                  level="H"
+                  bgColor="#ffffff"
+                  fgColor="#1a1a2e"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src={tagPng} alt="logo" className="w-3 h-3 bg-white p-0.5 rounded-sm" />
+                </div>
+              </div>
+              <div className="text-amber-500 text-[10px] mt-1 text-center">{t('share.tryDemo')}</div>
             </div>
-          </div>
-          <div className="w-16 h-16 bg-white rounded p-1 flex items-center justify-center relative">
-            <QRCodeSVG
-              value={PROJECT_URL}
-              size={56}
-              level="H"
-              bgColor="#ffffff"
-              fgColor="#1a1a2e"
-            />
-            {/* Center logo overlay */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <img src={tagPng} alt="logo" className="w-4 h-4 bg-white p-0.5 rounded-sm" />
+            
+            {/* Center text */}
+            <div className="flex-1 text-center pt-2">
+              <div className="text-academic-400 text-[10px] leading-tight">
+                {isEnglish ? 'UnchosenPath' : '未择之路'}
+              </div>
+              <div className="text-academic-500 text-[9px] mt-0.5">
+                {isEnglish ? 'Life Simulation' : '人生推演模拟器'}
+              </div>
+            </div>
+            
+            {/* Project QR Code */}
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 bg-white rounded p-1 flex items-center justify-center relative">
+                <QRCodeSVG
+                  value={PROJECT_URL}
+                  size={48}
+                  level="H"
+                  bgColor="#ffffff"
+                  fgColor="#1a1a2e"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src={tagPng} alt="logo" className="w-3 h-3 bg-white p-0.5 rounded-sm" />
+                </div>
+              </div>
+              <div className="text-academic-400 text-[10px] mt-1 text-center">{t('share.viewProject')}</div>
             </div>
           </div>
         </div>

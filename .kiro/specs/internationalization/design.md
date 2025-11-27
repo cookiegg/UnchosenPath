@@ -192,7 +192,7 @@ export function getSystemPrompt(config: SystemPromptConfig): string;
 // src/i18n/locales/en-US.json
 {
   "app": {
-    "title": "The Road Not Taken",
+    "title": "UnchosenPath",
     "subtitle": "Life Simulation in the AI Era"
   },
   "nav": {
