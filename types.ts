@@ -52,6 +52,25 @@ export interface HistoryItem {
   timestamp: number;
 }
 
+// 树形历史节点（支持分支回溯）
+export interface HistoryNode {
+  id: string;
+  parentId: string | null;
+  phase: string;
+  description: string;
+  choiceText: string;
+  feedback?: string;
+  scenario: GameScenario;  // 保存完整场景用于回溯
+  children: string[];      // 子节点ID
+  timestamp: number;
+}
+
+export interface GameTree {
+  nodes: Record<string, HistoryNode>;
+  currentNodeId: string | null;
+  rootId: string | null;
+}
+
 export interface GameScenario {
   phase: string; // e.g., "2025年 秋季 (大一上)", "2029年 夏季 (毕业季)"
   description: string;

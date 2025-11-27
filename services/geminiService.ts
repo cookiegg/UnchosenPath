@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Chat, Schema } from "@google/genai";
-import { GameScenario, FinalEvaluation, PlayerProfile, AIConfig, ModelProvider } from "../types";
+import { GameScenario, FinalEvaluation, PlayerProfile, AIConfig, ModelProvider, HistoryItem, HistoryNode } from "../types";
 import { generatePromptFromTemplate, defaultTemplates } from "./promptTemplates";
 
 // --- SHARED HELPERS ---
@@ -328,5 +328,114 @@ export const getFinalEvaluation = async (): Promise<FinalEvaluation> => {
         return JSON.parse(cleanJson(formatText)) as FinalEvaluation;
       }
     });
+  }
+};
+
+export const restoreSession = async (path: HistoryNode[]) => {
+  if (!activeConfig || !currentProfile) return;
+
+  const systemPrompt = generatePromptFromTemplate(activePromptTemplate, currentProfile, activeConfig.provider !== ModelProvider.GEMINI);
+
+  // Reconstruct conversation history
+  // Turn 0: User "Start" -> Model "Root Node"
+  // Turn 1: User "Root Choice" -> Model "Node 1"
+  // ...
+
+  // GEMINI PATH
+  if (activeConfig.provider === ModelProvider.GEMINI) {
+    const apiKey = activeConfig.apiKey;
+    const ai = new GoogleGenAI({ apiKey });
+
+    const history: any[] = [];
+
+    // Initial Turn
+    if (path.length > 0) {
+      const rootNode = path[0];
+      history.push({
+        role: 'user',
+        parts: [{ text: "开始模拟 (Start Simulation)" }]
+      });
+
+      const rootScenario: Partial<GameScenario> = {
+        phase: rootNode.phase,
+        description: rootNode.description,
+        options: [], // We don't have options stored in history, but it's fine for context
+        isGameOver: false
+      };
+
+      history.push({
+        role: 'model',
+        parts: [{ text: JSON.stringify(rootScenario) }]
+      });
+
+      // Subsequent Turns
+      for (let i = 0; i < path.length - 1; i++) {
+        const currentNode = path[i];
+        const nextNode = path[i + 1];
+
+        history.push({
+          role: 'user',
+          parts: [{ text: currentNode.choiceText }]
+        });
+
+        const nextScenario: Partial<GameScenario> = {
+          phase: nextNode.phase,
+          description: nextNode.description,
+          feedback: nextNode.feedback,
+          options: [],
+          isGameOver: false
+        };
+
+        history.push({
+          role: 'model',
+          parts: [{ text: JSON.stringify(nextScenario) }]
+        });
+      }
+    }
+
+    // Re-create session with history
+    geminiChatSession = ai.chats.create({
+      model: activeConfig.modelName || 'gemini-2.5-flash',
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: 'application/json',
+      },
+      history: history
+    });
+  }
+  // OPENAI COMPATIBLE PATH
+  else {
+    openaiHistory = [
+      { role: "system", content: systemPrompt }
+    ];
+
+    if (path.length > 0) {
+      const rootNode = path[0];
+      openaiHistory.push({ role: "user", content: "Start Simulation." });
+
+      const rootScenario: Partial<GameScenario> = {
+        phase: rootNode.phase,
+        description: rootNode.description,
+        options: [],
+        isGameOver: false
+      };
+      openaiHistory.push({ role: "assistant", content: JSON.stringify(rootScenario) });
+
+      for (let i = 0; i < path.length - 1; i++) {
+        const currentNode = path[i];
+        const nextNode = path[i + 1];
+
+        openaiHistory.push({ role: "user", content: currentNode.choiceText });
+
+        const nextScenario: Partial<GameScenario> = {
+          phase: nextNode.phase,
+          description: nextNode.description,
+          feedback: nextNode.feedback,
+          options: [],
+          isGameOver: false
+        };
+        openaiHistory.push({ role: "assistant", content: JSON.stringify(nextScenario) });
+      }
+    }
   }
 };

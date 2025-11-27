@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, ErrorInfo } from 'react';
-import { GameState, PlayerProfile, GameScenario, GameOption, FinalEvaluation, AIConfig, ModelProvider, HistoryItem } from './types';
-import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig, setPromptTemplate } from './services/geminiService';
+import { GameState, PlayerProfile, GameScenario, GameOption, FinalEvaluation, AIConfig, ModelProvider, HistoryItem, HistoryNode, GameTree } from './types';
+import { initializeGame, nextTurn, getFinalEvaluation, setAIConfig, setPromptTemplate, restoreSession } from './services/geminiService';
 import { getAllTemplates, saveCustomTemplate, deleteCustomTemplate, PromptTemplate } from './services/promptTemplates';
 import Button from './components/Button';
 import ScenarioCard from './components/ScenarioCard';
 import Tooltip from './components/Tooltip';
 import LocationCascader from './components/LocationCascader';
 import ProfessionAutocomplete from './components/ProfessionAutocomplete';
+import HistoryTree from './components/HistoryTree';
 import logoImage from './assets/tag-square.png';
 
 // --- PRESETS FOR PROVIDERS ---
@@ -197,43 +198,155 @@ const HistoryModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   history: HistoryItem[];
-}> = ({ isOpen, onClose, history }) => {
+  gameTree: GameTree;
+  onNodeClick?: (nodeId: string) => void;
+  currentNodeId?: string | null;
+}> = ({ isOpen, onClose, history, gameTree, onNodeClick, currentNodeId }) => {
+  const [viewMode, setViewMode] = useState<'list' | 'tree'>('tree');
+
   if (!isOpen) return null;
+
+  // 获取从根到当前节点的主路径
+  const getMainPath = (): HistoryNode[] => {
+    if (!gameTree.rootId || Object.keys(gameTree.nodes).length === 0) return [];
+
+    const path: HistoryNode[] = [];
+    let nodeId: string | null = gameTree.rootId;
+
+    while (nodeId) {
+      const node = gameTree.nodes[nodeId];
+      if (!node) break;
+      path.push(node);
+      // 沿着第一个子节点走（主线）
+      nodeId = node.children.length > 0 ? node.children[0] : null;
+    }
+    return path;
+  };
+
+  // 获取节点的所有分支数量
+  const getBranchCount = (nodeId: string): number => {
+    const node = gameTree.nodes[nodeId];
+    return node ? node.children.length : 0;
+  };
+
+  const mainPath = getMainPath();
+  const hasTree = Object.keys(gameTree.nodes).length > 0;
+  const hasBranches = (Object.values(gameTree.nodes) as HistoryNode[]).some(n => n.children.length > 1);
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm fade-in">
-      <div className="bg-academic-900 border border-academic-600 rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
+      <div className="bg-academic-900 border border-academic-600 rounded-xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl">
         <div className="p-4 border-b border-academic-700 flex justify-between items-center bg-academic-950 rounded-t-xl">
-          <h2 className="text-xl font-serif text-academic-100">人生履历</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-serif text-academic-100">人生履历</h2>
+            {hasTree && (
+              <div className="flex bg-academic-800 rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'list'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-academic-400 hover:text-white'
+                    }`}
+                >
+                  📋 列表
+                </button>
+                <button
+                  onClick={() => setViewMode('tree')}
+                  className={`px-3 py-1 text-xs rounded-md transition-colors ${viewMode === 'tree'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-academic-400 hover:text-white'
+                    }`}
+                >
+                  🌳 树形
+                </button>
+              </div>
+            )}
+            {hasBranches && (
+              <span className="text-academic-500 text-xs">（点击节点可回溯）</span>
+            )}
+          </div>
           <button onClick={onClose} className="text-academic-400 hover:text-white transition-colors">
             ✕
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar">
-          {history.length === 0 ? (
-            <div className="text-center text-academic-500 py-8">暂无记录</div>
+        <div className="flex-1 overflow-hidden">
+          {!hasTree && history.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-academic-500">暂无记录</div>
+          ) : viewMode === 'tree' && hasTree ? (
+            // 树形可视化视图
+            <HistoryTree
+              gameTree={gameTree}
+              onNodeClick={(nodeId) => onNodeClick?.(nodeId)}
+              currentNodeId={currentNodeId || null}
+            />
           ) : (
-            history.map((item, index) => (
-              <div key={index} className="relative pl-6 border-l-2 border-academic-700 pb-6 last:pb-0">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-academic-800 border-2 border-amber-600"></div>
-                <div className="text-xs text-amber-500 font-bold mb-1 uppercase tracking-wider">
-                  {item.phase}
-                </div>
-                <div className="text-academic-300 mb-2 text-sm italic">
-                  {item.description}
-                </div>
-                <div className="bg-academic-950/50 p-3 rounded border border-academic-800">
-                  <span className="text-academic-500 text-xs mr-2">你的选择:</span>
-                  <span className="text-academic-100 font-medium">{item.choiceText}</span>
-                </div>
-                {item.feedback && (
-                  <div className="mt-2 text-academic-400 text-sm">
-                    <span className="text-amber-600/80 mr-1">➤</span> {item.feedback}
+            // 列表视图
+            <div className="p-6 overflow-y-auto h-full space-y-6 custom-scrollbar">
+              {hasTree ? (
+                mainPath.map((node) => (
+                  <div
+                    key={node.id}
+                    className={`relative pl-6 border-l-2 pb-6 last:pb-0 cursor-pointer transition-all ${currentNodeId === node.id
+                      ? 'border-amber-500'
+                      : 'border-academic-700 hover:border-academic-500'
+                      }`}
+                    onClick={() => onNodeClick?.(node.id)}
+                  >
+                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 transition-colors ${currentNodeId === node.id
+                      ? 'bg-amber-500 border-amber-400'
+                      : 'bg-academic-800 border-amber-600 hover:bg-amber-600'
+                      }`}>
+                      {getBranchCount(node.id) > 1 && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full text-[8px] flex items-center justify-center text-white">
+                          {getBranchCount(node.id)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-amber-500 font-bold mb-1 uppercase tracking-wider flex items-center gap-2">
+                      {node.phase}
+                      {currentNodeId === node.id && (
+                        <span className="text-[10px] bg-amber-600 text-white px-1.5 py-0.5 rounded">当前</span>
+                      )}
+                    </div>
+                    <div className="text-academic-300 mb-2 text-sm italic line-clamp-2">
+                      {node.description}
+                    </div>
+                    <div className="bg-academic-950/50 p-3 rounded border border-academic-800">
+                      <span className="text-academic-500 text-xs mr-2">你的选择:</span>
+                      <span className="text-academic-100 font-medium">{node.choiceText}</span>
+                    </div>
+                    {node.feedback && (
+                      <div className="mt-2 text-academic-400 text-sm">
+                        <span className="text-amber-600/80 mr-1">➤</span> {node.feedback}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))
+                ))
+              ) : (
+                // 兼容旧的线性历史
+                history.map((item, index) => (
+                  <div key={index} className="relative pl-6 border-l-2 border-academic-700 pb-6 last:pb-0">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-academic-800 border-2 border-amber-600"></div>
+                    <div className="text-xs text-amber-500 font-bold mb-1 uppercase tracking-wider">
+                      {item.phase}
+                    </div>
+                    <div className="text-academic-300 mb-2 text-sm italic">
+                      {item.description}
+                    </div>
+                    <div className="bg-academic-950/50 p-3 rounded border border-academic-800">
+                      <span className="text-academic-500 text-xs mr-2">你的选择:</span>
+                      <span className="text-academic-100 font-medium">{item.choiceText}</span>
+                    </div>
+                    {item.feedback && (
+                      <div className="mt-2 text-academic-400 text-sm">
+                        <span className="text-amber-600/80 mr-1">➤</span> {item.feedback}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -346,11 +459,10 @@ const PromptEditorModal: React.FC<{
               {templates.map(t => (
                 <div
                   key={t.id}
-                  className={`p-3 rounded cursor-pointer transition-colors ${
-                    selectedId === t.id
-                      ? 'bg-amber-600/20 border border-amber-600'
-                      : 'bg-academic-800 border border-academic-700 hover:border-academic-500'
-                  }`}
+                  className={`p-3 rounded cursor-pointer transition-colors ${selectedId === t.id
+                    ? 'bg-amber-600/20 border border-amber-600'
+                    : 'bg-academic-800 border border-academic-700 hover:border-academic-500'
+                    }`}
                   onClick={() => handleSelectTemplate(t.id)}
                 >
                   <div className="flex justify-between items-start">
@@ -396,9 +508,8 @@ const PromptEditorModal: React.FC<{
               value={editingTemplate}
               onChange={(e) => setEditingTemplate(e.target.value)}
               readOnly={!isEditing}
-              className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-4 rounded text-sm font-mono resize-none leading-relaxed ${
-                isEditing ? 'focus:border-amber-600 focus:outline-none' : 'opacity-80'
-              }`}
+              className={`flex-1 bg-academic-950 border border-academic-700 text-academic-100 p-4 rounded text-sm font-mono resize-none leading-relaxed ${isEditing ? 'focus:border-amber-600 focus:outline-none' : 'opacity-80'
+                }`}
               placeholder="在这里编辑提示词模板..."
             />
 
@@ -480,6 +591,13 @@ const GameContent: React.FC = () => {
   const [aiConfig, setAiConfigState] = useState<AIConfig | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+
+  // 树形历史状态
+  const [gameTree, setGameTree] = useState<GameTree>({
+    nodes: {},
+    currentNodeId: null,
+    rootId: null
+  });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Prompt Template State
@@ -523,6 +641,10 @@ const GameContent: React.FC = () => {
           setCurrentScenario(parsed.currentScenario);
           setFinalResult(parsed.finalResult);
           setHistory(parsed.history || []);
+          // 加载树形历史
+          if (parsed.gameTree) {
+            setGameTree(parsed.gameTree);
+          }
           return; // Don't load saved profile if game is in progress
         }
       } catch (e) { console.error("Failed to load game state"); }
@@ -558,10 +680,11 @@ const GameContent: React.FC = () => {
       profile,
       currentScenario,
       finalResult,
-      history
+      history,
+      gameTree
     };
     localStorage.setItem('life_sim_game_state', JSON.stringify(stateToSave));
-  }, [gameState, profile, currentScenario, finalResult, history]);
+  }, [gameState, profile, currentScenario, finalResult, history, gameTree]);
 
   useEffect(() => {
     if (gameState === GameState.INTRO && nameInputRef.current) {
@@ -612,7 +735,8 @@ const GameContent: React.FC = () => {
     setError(null);
     try {
       const nextScenario = await nextTurn(choiceText);
-      // Record History
+
+      // Record History (兼容旧格式)
       const newHistoryItem: HistoryItem = {
         phase: currentScenario.phase,
         description: currentScenario.description,
@@ -621,6 +745,38 @@ const GameContent: React.FC = () => {
         timestamp: Date.now()
       };
       setHistory(prev => [...prev, newHistoryItem]);
+
+      // 创建新的树节点
+      const newNodeId = `node_${Date.now()}`;
+      const newNode: HistoryNode = {
+        id: newNodeId,
+        parentId: gameTree.currentNodeId,
+        phase: currentScenario.phase,
+        description: currentScenario.description,
+        choiceText: choiceText,
+        feedback: nextScenario.feedback,
+        scenario: currentScenario,
+        children: [],
+        timestamp: Date.now()
+      };
+
+      setGameTree(prev => {
+        const newNodes = { ...prev.nodes, [newNodeId]: newNode };
+
+        // 如果有父节点，更新父节点的 children
+        if (prev.currentNodeId && newNodes[prev.currentNodeId]) {
+          newNodes[prev.currentNodeId] = {
+            ...newNodes[prev.currentNodeId],
+            children: [...newNodes[prev.currentNodeId].children, newNodeId]
+          };
+        }
+
+        return {
+          nodes: newNodes,
+          currentNodeId: newNodeId,
+          rootId: prev.rootId || newNodeId
+        };
+      });
 
       setCurrentScenario(nextScenario);
 
@@ -636,6 +792,45 @@ const GameContent: React.FC = () => {
       setError(`错误: ${errMsg}。请检查网络或点击重试。`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 回溯到指定节点
+  const handleHistoryNodeClick = async (nodeId: string) => {
+    const node = gameTree.nodes[nodeId];
+    if (!node) return;
+
+    // 1. 恢复到该节点的场景
+    setCurrentScenario(node.scenario);
+    setGameTree(prev => ({
+      ...prev,
+      currentNodeId: nodeId
+    }));
+    setShowHistory(false);
+
+    // 2. 重建路径并恢复 AI 上下文
+    // 从根节点到当前节点的路径
+    const path: HistoryNode[] = [];
+    let currentId: string | null = nodeId;
+
+    // 自底向上回溯
+    while (currentId) {
+      const n = gameTree.nodes[currentId];
+      if (n) {
+        path.unshift(n);
+        currentId = n.parentId;
+      } else {
+        break;
+      }
+    }
+
+    // 调用服务恢复会话
+    try {
+      await restoreSession(path);
+      console.log("AI Session restored to node:", nodeId);
+    } catch (e) {
+      console.error("Failed to restore AI session:", e);
+      // 不阻断 UI，但可能导致上下文丢失
     }
   };
 
@@ -777,8 +972,8 @@ const GameContent: React.FC = () => {
                   value={profile.simulationStartYear}
                   onChange={(e) => {
                     const startYear = parseInt(e.target.value) || currentYear;
-                    setProfile({ 
-                      ...profile, 
+                    setProfile({
+                      ...profile,
                       simulationStartYear: startYear,
                       simulationEndYear: Math.max(startYear + 1, profile.simulationEndYear)
                     });
@@ -1305,7 +1500,7 @@ const GameContent: React.FC = () => {
             <img src={logoImage} alt="Logo" className="h-auto w-12" />
             <div className="hidden md:flex md:flex-col">
               <h1 className="font-serif text-academic-100 text-lg tracking-wide">
-                未择之路：人生推演 
+                未择之路：人生推演
                 {gameState !== GameState.INTRO && (
                   <span className="text-academic-500 text-sm ml-1">
                     {profile.simulationStartYear}-{profile.simulationEndYear}
@@ -1315,37 +1510,37 @@ const GameContent: React.FC = () => {
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-academic-500 text-xs">@墨渊Transhuman</span>
                 <div className="flex items-center gap-1.5">
-                  <a 
-                    href="https://github.com/cookiegg" 
-                    target="_blank" 
+                  <a
+                    href="https://github.com/cookiegg"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-academic-500 hover:text-amber-500 transition-colors"
                     title="GitHub"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
                     </svg>
                   </a>
-                  <a 
-                    href="https://x.com/XuefW82242" 
-                    target="_blank" 
+                  <a
+                    href="https://x.com/XuefW82242"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-academic-500 hover:text-amber-500 transition-colors"
                     title="X (Twitter)"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                     </svg>
                   </a>
-                  <a 
-                    href="https://v.douyin.com/EvusAOjyPXQ" 
-                    target="_blank" 
+                  <a
+                    href="https://v.douyin.com/EvusAOjyPXQ"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-academic-500 hover:text-amber-500 transition-colors"
                     title="抖音"
                   >
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                      <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
                     </svg>
                   </a>
                 </div>
@@ -1395,6 +1590,9 @@ const GameContent: React.FC = () => {
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
         history={history}
+        gameTree={gameTree}
+        onNodeClick={handleHistoryNodeClick}
+        currentNodeId={gameTree.currentNodeId}
       />
 
       <ConfirmModal
