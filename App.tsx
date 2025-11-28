@@ -1072,32 +1072,52 @@ const GameContent: React.FC = () => {
               <div>
                 <label className="block text-academic-400 text-xs mb-1">{t('form.startYear')}</label>
                 <input
-                  type="number"
-                  min={currentYear}
-                  max={2100}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="2025"
                   className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
                   value={profile.simulationStartYear}
                   onChange={(e) => {
-                    const startYear = parseInt(e.target.value) || currentYear;
-                    // Validate start date is not before current date
-                    const now = new Date();
-                    const currentMonth = now.getMonth() + 1;
-                    let validStartYear = startYear;
-                    let validStartMonth = profile.simulationStartMonth;
+                    const inputValue = e.target.value;
                     
-                    if (startYear < currentYear || (startYear === currentYear && profile.simulationStartMonth < currentMonth)) {
-                      validStartYear = currentYear;
-                      validStartMonth = currentMonth;
+                    // Allow empty input for editing
+                    if (inputValue === '') return;
+                    
+                    // Only allow digits
+                    if (!/^\d+$/.test(inputValue)) return;
+                    
+                    const startYear = parseInt(inputValue);
+                    if (isNaN(startYear)) return;
+                    
+                    // Allow any number during typing, will validate on blur
+                    // Adjust end year if needed to maintain constraints
+                    let newEndYear = profile.simulationEndYear;
+                    if (startYear >= 2025 && newEndYear <= startYear) {
+                      newEndYear = startYear + 1;
+                    } else if (startYear >= 2025 && newEndYear > startYear + 100) {
+                      newEndYear = startYear + 100;
                     }
                     
-                    const newEndYear = Math.max(validStartYear + 1, profile.simulationEndYear);
-                    const cappedEndYear = Math.min(newEndYear, validStartYear + 100);
                     setProfile({
                       ...profile,
-                      simulationStartYear: validStartYear,
-                      simulationStartMonth: validStartMonth,
-                      simulationEndYear: cappedEndYear
+                      simulationStartYear: startYear,
+                      simulationEndYear: newEndYear
                     });
+                  }}
+                  onBlur={(e) => {
+                    const year = parseInt(e.target.value);
+                    if (isNaN(year) || year < 2025) {
+                      setProfile({
+                        ...profile,
+                        simulationStartYear: 2025
+                      });
+                    } else if (year > 2100) {
+                      setProfile({
+                        ...profile,
+                        simulationStartYear: 2100
+                      });
+                    }
                   }}
                 />
               </div>
@@ -1107,20 +1127,11 @@ const GameContent: React.FC = () => {
                   className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
                   value={profile.simulationStartMonth}
                   onChange={(e) => {
-                    const startMonth = parseInt(e.target.value);
-                    // Validate start date is not before current date
-                    const now = new Date();
-                    const currentMonth = now.getMonth() + 1;
-                    
-                    if (profile.simulationStartYear === currentYear && startMonth < currentMonth) {
-                      return; // Don't allow past months in current year
-                    }
-                    
-                    setProfile({ ...profile, simulationStartMonth: startMonth });
+                    setProfile({ ...profile, simulationStartMonth: parseInt(e.target.value) });
                   }}
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
-                    <option key={month} value={month} disabled={profile.simulationStartYear === currentYear && month < new Date().getMonth() + 1}>
+                    <option key={month} value={month}>
                       {t(`form.${['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][month - 1]}`)}
                     </option>
                   ))}
@@ -1129,19 +1140,46 @@ const GameContent: React.FC = () => {
               <div>
                 <label className="block text-academic-400 text-xs mb-1">{t('form.endYear')}</label>
                 <input
-                  type="number"
-                  min={profile.simulationStartYear + 1}
-                  max={Math.min(2100, profile.simulationStartYear + 100)}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={String(profile.simulationStartYear + 10)}
                   className="w-full bg-academic-900 border border-academic-600 text-academic-100 p-2 rounded focus:outline-none focus:border-amber-600 transition-colors text-sm"
                   value={profile.simulationEndYear}
                   onChange={(e) => {
-                    const endYear = parseInt(e.target.value) || profile.simulationStartYear + 10;
-                    const validEndYear = Math.max(endYear, profile.simulationStartYear + 1);
-                    const cappedEndYear = Math.min(validEndYear, profile.simulationStartYear + 100);
+                    const inputValue = e.target.value;
+                    
+                    // Allow empty input for editing
+                    if (inputValue === '') return;
+                    
+                    // Only allow digits
+                    if (!/^\d+$/.test(inputValue)) return;
+                    
+                    const endYear = parseInt(inputValue);
+                    if (isNaN(endYear)) return;
+                    
+                    // Allow any number during typing, will validate on blur
                     setProfile({ 
                       ...profile, 
-                      simulationEndYear: cappedEndYear
+                      simulationEndYear: endYear
                     });
+                  }}
+                  onBlur={(e) => {
+                    const year = parseInt(e.target.value);
+                    const minYear = profile.simulationStartYear + 1;
+                    const maxYear = profile.simulationStartYear + 100;
+                    
+                    if (isNaN(year) || year <= profile.simulationStartYear) {
+                      setProfile({ 
+                        ...profile, 
+                        simulationEndYear: minYear
+                      });
+                    } else if (year > maxYear) {
+                      setProfile({ 
+                        ...profile, 
+                        simulationEndYear: maxYear
+                      });
+                    }
                   }}
                 />
               </div>
@@ -1163,6 +1201,12 @@ const GameContent: React.FC = () => {
               </div>
             </div>
             <p className="text-academic-500 text-xs mt-2">
+              {currentLanguage === 'zh-CN' 
+                ? `💡 提示：起始年份 ≥ 2025，终止年份需满足：起始年份 < 终止年份 ≤ 起始年份 + 100`
+                : `💡 Tip: Start year ≥ 2025, End year must satisfy: Start year < End year ≤ Start year + 100`
+              }
+            </p>
+            <p className="text-academic-500 text-xs mt-1">
               {t('form.simulationYearsHint', { 
                 years: profile.simulationEndYear - profile.simulationStartYear + 
                   (profile.simulationEndMonth >= profile.simulationStartMonth ? 0 : 1)
